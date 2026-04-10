@@ -1,0 +1,146 @@
+import { supabase } from "./supabase";
+
+export async function getOffers(filters?: {
+  category?: string;
+  subcategory?: string;
+  search?: string;
+  sort?: string;
+}) {
+  let query = supabase.from("offers").select("*");
+
+  if (filters?.category) {
+    query = query.eq("category", filters.category);
+  }
+  if (filters?.subcategory) {
+    query = query.eq("subcategory", filters.subcategory);
+  }
+  if (filters?.search) {
+    query = query.or(
+      `product.ilike.%${filters.search}%,brand.ilike.%${filters.search}%,merchant.ilike.%${filters.search}%`
+    );
+  }
+
+  switch (filters?.sort) {
+    case "price-asc":
+      query = query.order("price", { ascending: true });
+      break;
+    case "price-desc":
+      query = query.order("price", { ascending: false });
+      break;
+    default:
+      query = query.order("score", { ascending: false });
+      break;
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Erreur chargement offres:", error);
+    return [];
+  }
+
+  return data.map((o: any) => ({
+    id: o.id,
+    product: o.product,
+    brand: o.brand,
+    model: o.model,
+    category: o.category,
+    subcategory: o.subcategory,
+    merchant: o.merchant,
+    price: o.price,
+    barredPrice: o.barred_price,
+    availability: o.availability,
+    delivery: o.delivery,
+    warranty: o.warranty,
+    score: o.score,
+    status: o.status,
+    statusColor: o.status_color,
+    confidence: o.confidence,
+    freshness: o.freshness,
+    pefas: {
+      P: o.pefas_p,
+      E: o.pefas_e,
+      F: o.pefas_f,
+      A: o.pefas_a,
+      S: o.pefas_s,
+    },
+    mimoShort: o.mimo_short,
+    reasons: o.reasons,
+    vigilances: o.vigilances,
+  }));
+}
+
+export async function getOfferById(id: string) {
+  const { data, error } = await supabase
+    .from("offers")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) return null;
+
+  const o = data;
+  return {
+    id: o.id,
+    product: o.product,
+    brand: o.brand,
+    model: o.model,
+    category: o.category,
+    subcategory: o.subcategory,
+    merchant: o.merchant,
+    price: o.price,
+    barredPrice: o.barred_price,
+    availability: o.availability,
+    delivery: o.delivery,
+    warranty: o.warranty,
+    score: o.score,
+    status: o.status,
+    statusColor: o.status_color,
+    confidence: o.confidence,
+    freshness: o.freshness,
+    pefas: {
+      P: o.pefas_p,
+      E: o.pefas_e,
+      F: o.pefas_f,
+      A: o.pefas_a,
+      S: o.pefas_s,
+    },
+    mimoShort: o.mimo_short,
+    reasons: o.reasons,
+    vigilances: o.vigilances,
+  };
+}
+
+export async function getProjects() {
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data;
+}
+
+export async function addFavorite(offerId: string) {
+  const { error } = await supabase
+    .from("favorites")
+    .insert({ offer_id: offerId });
+  return !error;
+}
+
+export async function removeFavorite(offerId: string) {
+  const { error } = await supabase
+    .from("favorites")
+    .delete()
+    .eq("offer_id", offerId);
+  return !error;
+}
+
+export async function getFavorites() {
+  const { data, error } = await supabase
+    .from("favorites")
+    .select("offer_id")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data.map((f: any) => f.offer_id);
+}

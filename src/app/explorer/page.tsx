@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, OFFERS } from "@/lib/data";
+import { CATEGORIES } from "@/lib/data";
+import { getOffers } from "@/lib/queries";
+import type { Offer } from "@/lib/data";
 
 function ScoreCircle({ score }: { score: number }) {
   const color =
@@ -30,19 +32,23 @@ export default function ExplorerPage() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [sort, setSort] = useState("score");
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  let filtered = [...OFFERS];
-  if (activeCategory) filtered = filtered.filter((o) => o.category === activeCategory);
-  if (activeSubcategory) filtered = filtered.filter((o) => o.subcategory === activeSubcategory);
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(
-      (o) => o.product.toLowerCase().includes(q) || o.brand.toLowerCase().includes(q) || o.merchant.toLowerCase().includes(q)
-    );
-  }
-  if (sort === "score") filtered.sort((a, b) => b.score - a.score);
-  if (sort === "price-asc") filtered.sort((a, b) => a.price - b.price);
-  if (sort === "price-desc") filtered.sort((a, b) => b.price - a.price);
+  useEffect(() => {
+    if (activeSubcategory || search) {
+      setLoading(true);
+      getOffers({
+        category: activeCategory || undefined,
+        subcategory: activeSubcategory || undefined,
+        search: search || undefined,
+        sort: sort,
+      }).then((data) => {
+        setOffers(data);
+        setLoading(false);
+      });
+    }
+  }, [activeCategory, activeSubcategory, search, sort]);
 
   const activeCat = CATEGORIES.find((c) => c.id === activeCategory);
 
@@ -115,14 +121,30 @@ export default function ExplorerPage() {
       {(activeSubcategory || search) && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-gray-500">{filtered.length} resultats</p>
+            <p className="text-xs text-gray-500">
+              {loading ? "Chargement..." : offers.length + " resultats"}
+            </p>
             <select className="text-xs bg-white border border-gray-200 rounded-lg px-2 py-1.5 outline-none" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="score">Meilleur score</option>
               <option value="price-asc">Prix croissant</option>
               <option value="price-desc">Prix decroissant</option>
             </select>
           </div>
-          {filtered.length === 0 ? (
+
+          {loading ? (
+            <div className="space-y-2.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 animate-pulse">
+                  <div className="w-16 h-16 rounded-lg bg-gray-200"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : offers.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-3xl mb-3">🔍</p>
               <h3 className="font-bold text-gray-600 mb-1">Aucun resultat</h3>
@@ -130,7 +152,7 @@ export default function ExplorerPage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filtered.map((o) => (
+              {offers.map((o) => (
                 <div key={o.id} onClick={() => router.push("/explorer/" + o.id)} className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer">
                   <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-2xl shrink-0">
                     {o.category === "electromenager" ? "🏠" : o.category === "froid" ? "❄️" : "📺"}
