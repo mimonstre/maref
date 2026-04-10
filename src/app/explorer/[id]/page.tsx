@@ -1,7 +1,8 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
-import { OFFERS } from "@/lib/data";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites } from "@/lib/queries";
+import type { Offer } from "@/lib/data";
 
 function ScoreCircle({ score, size = "md" }: { score: number; size?: string }) {
   const color =
@@ -46,10 +47,57 @@ const PEFAS_INFO: Record<string, { name: string; desc: string }> = {
 export default function OfferDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const [alternatives, setAlternatives] = useState<Offer[]>([]);
   const [isFav, setIsFav] = useState(false);
   const [activeAxis, setActiveAxis] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const offer = OFFERS.find((o) => o.id === params.id);
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const o = await getOfferById(params.id as string);
+      setOffer(o);
+      if (o) {
+        const all = await getOffers({ subcategory: o.subcategory });
+        setAlternatives(all.filter((a: Offer) => a.id !== o.id).slice(0, 3));
+        const favs = await getFavorites();
+        setIsFav(favs.includes(o.id));
+      }
+      setLoading(false);
+    }
+    load();
+  }, [params.id]);
+
+  async function toggleFav() {
+    if (!offer) return;
+    if (isFav) {
+      await removeFavorite(offer.id);
+      setIsFav(false);
+    } else {
+      await addFavorite(offer.id);
+      setIsFav(true);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-20"></div>
+        <div className="flex gap-4">
+          <div className="w-24 h-24 bg-gray-200 rounded-xl"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-5 bg-gray-200 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+        <div className="h-24 bg-gray-200 rounded-xl"></div>
+        <div className="h-20 bg-gray-200 rounded-xl"></div>
+      </div>
+    );
+  }
+
   if (!offer) {
     return (
       <div className="text-center py-20">
@@ -60,41 +108,22 @@ export default function OfferDetailPage() {
     );
   }
 
-  const alternatives = OFFERS.filter((o) => o.subcategory === offer.subcategory && o.id !== offer.id).slice(0, 3);
   const catIcon = offer.category === "electromenager" ? "🏠" : offer.category === "froid" ? "❄️" : "📺";
-
   const mimoLong = offer.score >= 72
     ? "Cette offre se distingue par un equilibre rare entre performance, fiabilite et cout total. Le marchand offre des conditions solides, et le produit est reconnu pour sa durabilite. Pour votre profil, c est l un des meilleurs positionnements disponibles dans cette categorie."
     : offer.score >= 58
     ? "L offre est dans la moyenne haute. Le produit remplit les fonctions essentielles, mais le cout total etendu ou certaines conditions marchandes peuvent reduire l avantage percu. Comparez avec les alternatives avant de decider."
     : "Plusieurs axes sont en tension. Le rapport entre le prix demande et la valeur reelle livree n est pas optimal. Le cout total etendu peut etre significativement superieur au prix affiche. Une alternative serait preferable.";
-
   const costUsage = Math.round(offer.price * 0.08);
   const costTotal = offer.price + costUsage * 4;
 
-  const priceHistory = Array.from({ length: 12 }, (_, i) => {
-    const base = offer.price;
-    return Math.round(base * (0.9 + Math.random() * 0.2));
-  });
-  priceHistory[11] = offer.price;
-  const priceMin = Math.min(...priceHistory);
-  const priceMax = Math.max(...priceHistory);
-  const priceRange = priceMax - priceMin || 1;
-  const svgPath = priceHistory.map((v, i) => {
-    const x = (i / 11) * 100;
-    const y = 100 - ((v - priceMin) / priceRange) * 80 - 10;
-    return (i === 0 ? "M" : "L") + x + "," + y;
-  }).join(" ");
-
   return (
     <div className="space-y-4">
-      {/* Back */}
       <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
         Retour
       </button>
 
-      {/* Identity */}
       <div className="flex gap-4 items-start">
         <div className="w-24 h-24 rounded-xl bg-gray-100 flex items-center justify-center text-4xl shrink-0">{catIcon}</div>
         <div>
@@ -105,7 +134,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Price */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -122,7 +150,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Score */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center gap-4">
           <ScoreCircle score={offer.score} size="lg" />
@@ -137,20 +164,18 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Mimo */}
       <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-4">
         <span className="absolute -top-2 left-3 bg-emerald-700 text-white text-[0.65rem] font-bold px-2 py-0.5 rounded">Mimo</span>
         <p className="text-sm text-gray-800 mt-1">{mimoLong}</p>
       </div>
 
-      {/* PEFAS */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h3 className="font-bold text-sm mb-3">Analyse PEFAS</h3>
         {Object.entries(PEFAS_INFO).map(([key, info]) => (
           <div key={key} className="cursor-pointer" onClick={() => setActiveAxis(activeAxis === key ? null : key)}>
             <AxisBar label={info.name} value={offer.pefas[key as keyof typeof offer.pefas]} />
             {activeAxis === key && (
-              <div className="mb-3 ml-0 p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-xs text-gray-600">{info.desc}</p>
                 <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-lg p-3 mt-2">
                   <span className="absolute -top-2 left-2 bg-emerald-700 text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded">Mimo</span>
@@ -164,7 +189,6 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
-      {/* Reasons */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-emerald-700">Points forts</h4>
         {offer.reasons.map((r, i) => (
@@ -175,7 +199,6 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
-      {/* Vigilances */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-yellow-600">Points de vigilance</h4>
         {offer.vigilances.map((v, i) => (
@@ -186,7 +209,6 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
-      {/* Extended cost */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-3">Cout total etendu</h4>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -203,22 +225,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Price history */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-bold text-sm">Historique de prix</h4>
-          <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">Stable</span>
-        </div>
-        <svg viewBox="0 0 100 100" className="w-full" style={{ height: 60 }} preserveAspectRatio="none">
-          <path d={svgPath} fill="none" stroke="#2e8b57" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-xs text-gray-400">-12 mois</span>
-          <span className="text-xs text-gray-400">Aujourd hui</span>
-        </div>
-      </div>
-
-      {/* Alternatives */}
       {alternatives.length > 0 && (
         <div>
           <h3 className="font-bold text-sm mb-3">Alternatives</h3>
@@ -238,12 +244,11 @@ export default function OfferDetailPage() {
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setIsFav(!isFav)} className={"text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors " + (isFav ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
-          {isFav ? "Sauvegarde" : "Sauvegarder"}
+        <button onClick={toggleFav} className={"text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors " + (isFav ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
+          {isFav ? "Sauvegarde ❤️" : "Sauvegarder"}
         </button>
-        <button className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
+        <button onClick={() => router.push("/comparer")} className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
           Comparer
         </button>
         <button className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-emerald-300 transition-colors">
