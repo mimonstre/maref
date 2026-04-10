@@ -2,13 +2,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites } from "@/lib/queries";
+import { supabase } from "@/lib/supabase";
 import type { Offer } from "@/lib/data";
 
 function ScoreCircle({ score, size = "md" }: { score: number; size?: string }) {
   const color =
     score >= 85 ? "bg-emerald-700" : score >= 72 ? "bg-emerald-600" : score >= 58 ? "bg-lime-600" : score >= 42 ? "bg-yellow-500" : score >= 25 ? "bg-orange-500" : "bg-red-600";
   const dim = size === "sm" ? "w-10 h-10 text-sm" : size === "lg" ? "w-20 h-20 text-2xl" : "w-14 h-14 text-lg";
-  return <div className={dim + " " + color + " rounded-full flex items-center justify-center text-white font-bold shrink-0"}>{score}</div>;
+  return <div className={dim + " " + color + " rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-sm"}>{score}</div>;
 }
 
 function StatusBadge({ score }: { score: number }) {
@@ -19,7 +20,7 @@ function StatusBadge({ score }: { score: number }) {
     : score >= 42 ? { l: "A surveiller", c: "bg-yellow-100 text-yellow-700" }
     : score >= 25 ? { l: "Risque", c: "bg-orange-100 text-orange-700" }
     : { l: "Peu pertinent", c: "bg-red-100 text-red-700" };
-  return <span className={"text-xs font-semibold px-2 py-0.5 rounded-full " + s.c}>{s.l}</span>;
+  return <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + s.c}>{s.l}</span>;
 }
 
 function AxisBar({ label, value }: { label: string; value: number }) {
@@ -44,6 +45,8 @@ const PEFAS_INFO: Record<string, { name: string; desc: string }> = {
   S: { name: "Stabilite", desc: "Constance du produit et de l offre dans le temps : durabilite, historique de prix, fiabilite long terme." },
 };
 
+type Project = { id: string; name: string; category: string };
+
 export default function OfferDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -52,6 +55,10 @@ export default function OfferDetailPage() {
   const [isFav, setIsFav] = useState(false);
   const [activeAxis, setActiveAxis] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectMessage, setProjectMessage] = useState("");
+  const [favMessage, setFavMessage] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -64,6 +71,8 @@ export default function OfferDetailPage() {
         const favs = await getFavorites();
         setIsFav(favs.includes(o.id));
       }
+      const { data } = await supabase.from("projects").select("id, name, category").order("created_at", { ascending: false });
+      if (data) setProjects(data);
       setLoading(false);
     }
     load();
@@ -74,10 +83,27 @@ export default function OfferDetailPage() {
     if (isFav) {
       await removeFavorite(offer.id);
       setIsFav(false);
+      setFavMessage("Retire des favoris");
     } else {
       await addFavorite(offer.id);
       setIsFav(true);
+      setFavMessage("Ajoute aux favoris");
     }
+    setTimeout(() => setFavMessage(""), 2000);
+  }
+
+  async function addToProject(projectId: string) {
+    if (!offer) return;
+    const { data: existing } = await supabase.from("project_offers").select("id").eq("project_id", projectId).eq("offer_id", offer.id);
+    if (existing && existing.length > 0) {
+      setProjectMessage("Deja dans ce projet");
+    } else {
+      await supabase.from("project_offers").insert({ project_id: projectId, offer_id: offer.id });
+      const proj = projects.find((p) => p.id === projectId);
+      setProjectMessage("Ajoute a " + (proj?.name || "projet"));
+    }
+    setShowProjectMenu(false);
+    setTimeout(() => setProjectMessage(""), 2000);
   }
 
   if (loading) {
@@ -93,7 +119,6 @@ export default function OfferDetailPage() {
           </div>
         </div>
         <div className="h-24 bg-gray-200 rounded-xl"></div>
-        <div className="h-20 bg-gray-200 rounded-xl"></div>
       </div>
     );
   }
@@ -119,11 +144,24 @@ export default function OfferDetailPage() {
 
   return (
     <div className="space-y-4">
+      {/* Toast messages */}
+      {favMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+          {favMessage}
+        </div>
+      )}
+      {projectMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+          {projectMessage}
+        </div>
+      )}
+
       <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
         Retour
       </button>
 
+      {/* Identity */}
       <div className="flex gap-4 items-start">
         <div className="w-24 h-24 rounded-xl bg-gray-100 flex items-center justify-center text-4xl shrink-0">{catIcon}</div>
         <div>
@@ -134,6 +172,7 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
+      {/* Price */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -150,6 +189,7 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
+      {/* Score */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center gap-4">
           <ScoreCircle score={offer.score} size="lg" />
@@ -164,11 +204,13 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
+      {/* Mimo */}
       <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-4">
         <span className="absolute -top-2 left-3 bg-emerald-700 text-white text-[0.65rem] font-bold px-2 py-0.5 rounded">Mimo</span>
         <p className="text-sm text-gray-800 mt-1">{mimoLong}</p>
       </div>
 
+      {/* PEFAS */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h3 className="font-bold text-sm mb-3">Analyse PEFAS</h3>
         {Object.entries(PEFAS_INFO).map(([key, info]) => (
@@ -189,6 +231,7 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
+      {/* Reasons */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-emerald-700">Points forts</h4>
         {offer.reasons.map((r, i) => (
@@ -199,6 +242,7 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
+      {/* Vigilances */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-yellow-600">Points de vigilance</h4>
         {offer.vigilances.map((v, i) => (
@@ -209,6 +253,7 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
+      {/* Extended cost */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-3">Cout total etendu</h4>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -225,6 +270,7 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
+      {/* Alternatives */}
       {alternatives.length > 0 && (
         <div>
           <h3 className="font-bold text-sm mb-3">Alternatives</h3>
@@ -244,6 +290,7 @@ export default function OfferDetailPage() {
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex gap-2 flex-wrap">
         <button onClick={toggleFav} className={"text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors " + (isFav ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
           {isFav ? "Sauvegarde ❤️" : "Sauvegarder"}
@@ -251,9 +298,31 @@ export default function OfferDetailPage() {
         <button onClick={() => router.push("/comparer")} className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
           Comparer
         </button>
-        <button className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-emerald-300 transition-colors">
-          Ajouter au projet
-        </button>
+        <div className="relative">
+          <button onClick={() => setShowProjectMenu(!showProjectMenu)} className="text-sm font-semibold px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-emerald-300 transition-colors">
+            Ajouter au projet
+          </button>
+          {showProjectMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowProjectMenu(false)}></div>
+              <div className="absolute bottom-12 left-0 bg-white border border-gray-200 rounded-xl shadow-xl py-2 w-56 z-50 animate-scale-in">
+                {projects.length === 0 ? (
+                  <div className="px-4 py-3">
+                    <p className="text-sm text-gray-500 mb-2">Aucun projet</p>
+                    <button onClick={() => router.push("/projets")} className="text-xs font-semibold text-emerald-700">Creer un projet</button>
+                  </div>
+                ) : (
+                  projects.map((p) => (
+                    <button key={p.id} onClick={() => addToProject(p.id)} className="block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                      <span className="font-medium">{p.name}</span>
+                      <span className="text-xs text-gray-400 ml-1.5">{p.category}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
