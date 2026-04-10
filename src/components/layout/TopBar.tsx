@@ -1,13 +1,15 @@
 ﻿"use client";
 import Link from "next/link";
-import { Bell, MessageSquare } from "lucide-react";
+import { Bell, MessageSquare, Heart, Users } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { signOut } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function TopBar() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [showMenu, setShowMenu] = useState(false);
 
   const initials = user?.user_metadata?.name
     ? user.user_metadata.name.charAt(0).toUpperCase()
@@ -20,11 +22,12 @@ export default function TopBar() {
       </Link>
       <nav className="hidden md:flex items-center gap-1">
         {[
-          { href: "/guide", label: "Guide" },
-          { href: "/profil", label: "Profil" },
           { href: "/", label: "Accueil" },
           { href: "/explorer", label: "Explorer" },
+          { href: "/comparer", label: "Comparer" },
           { href: "/projets", label: "Projets" },
+          { href: "/guide", label: "Guide" },
+          { href: "/forum", label: "Forum" },
         ].map((item) => (
           <Link
             key={item.href}
@@ -35,7 +38,7 @@ export default function TopBar() {
           </Link>
         ))}
       </nav>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {!loading && !user ? (
           <Link
             href="/login"
@@ -45,20 +48,51 @@ export default function TopBar() {
           </Link>
         ) : (
           <>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+            <Link href="/favoris" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Heart className="w-5 h-5 text-gray-500" />
+            </Link>
+            <Link href="/assistant" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
               <MessageSquare className="w-5 h-5 text-gray-500" />
-            </button>
+            </Link>
             <button className="p-2 rounded-full hover:bg-gray-100 transition-colors relative">
               <Bell className="w-5 h-5 text-gray-500" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
-            <button
-              onClick={async () => { await signOut(); router.push("/login"); }}
-              className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center text-sm font-bold hover:bg-emerald-800 transition-colors"
-              title="Deconnexion"
-            >
-              {initials}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center text-sm font-bold hover:bg-emerald-800 transition-colors"
+              >
+                {initials}
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-48 z-50 animate-scale-in">
+                  <Link href="/profil" onClick={() => setShowMenu(false)} className="block px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                    Mon profil
+                  </Link>
+                  <Link href="/favoris" onClick={() => setShowMenu(false)} className="block px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                    Favoris
+                  </Link>
+                  <Link href="/projets" onClick={() => setShowMenu(false)} className="block px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                    Projets
+                  </Link>
+                  <Link href="/assistant" onClick={() => setShowMenu(false)} className="block px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                    Assistant Mimo
+                  </Link>
+                  <Link href="/forum" onClick={() => setShowMenu(false)} className="block px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
+                    Forum
+                  </Link>
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <button
+                      onClick={async () => { await signOut(); setShowMenu(false); router.push("/login"); }}
+                      className="block w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      Deconnexion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
