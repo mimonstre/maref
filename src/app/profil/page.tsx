@@ -34,7 +34,7 @@ export default function ProfilPage() {
   const userName = user.user_metadata?.name || "Utilisateur";
   const initials = userName.charAt(0).toUpperCase();
   const email = user.email || "";
-  const joined = new Date(user.created_at || "").toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const joined = "avril 2026";
 
   const badges = ["Premier score", "Explorateur", "Comparateur"];
   const level = 3;
@@ -48,7 +48,6 @@ export default function ProfilPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header card */}
       <div className="bg-gradient-to-br from-emerald-700 to-emerald-800 rounded-2xl p-6 text-white text-center shadow-lg">
         <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold mx-auto border-2 border-white/30">
           {initials}
@@ -67,7 +66,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-4 gap-2">
         <div className="bg-white rounded-xl border border-gray-200 p-3 text-center">
           <p className="text-lg font-bold text-emerald-700">{favCount}</p>
@@ -87,7 +85,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Mimo */}
       <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-4 shadow-sm">
         <span className="absolute -top-2.5 left-4 bg-emerald-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
         <p className="text-sm text-gray-800 mt-2 leading-relaxed">
@@ -95,7 +92,6 @@ export default function ProfilPage() {
         </p>
       </div>
 
-      {/* Preferences */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold">Vos preferences</h3>
@@ -179,11 +175,10 @@ export default function ProfilPage() {
         )}
       </div>
 
-      {/* Impact */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h3 className="font-bold mb-2">Impact sur les resultats</h3>
         <p className="text-sm text-gray-600 leading-relaxed">
-          Vos preferences modifient la ponderation des axes PEFAS et donc le classement des offres. Chaque modification de votre profil recalibre automatiquement les scores et les recommandations.
+          Vos preferences modifient la ponderation des axes PEFAS et donc le classement des offres. Chaque modification recalibre automatiquement les scores.
         </p>
         <div className="mt-3 grid grid-cols-5 gap-1.5">
           {[
@@ -202,7 +197,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Activity */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h3 className="font-bold mb-3">Activite recente</h3>
         <div className="space-y-3">
@@ -223,7 +217,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Quick links */}
       <div className="grid grid-cols-2 gap-3">
         <Link href="/favoris" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-300 transition-all flex items-center gap-2">
           <span className="text-xl">❤️</span>
@@ -237,13 +230,12 @@ export default function ProfilPage() {
           <span className="text-xl">🤖</span>
           <span className="text-sm font-semibold">Assistant Mimo</span>
         </Link>
-        <Link href="/forum" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-300 transition-all flex items-center gap-2">
-          <span className="text-xl">💬</span>
-          <span className="text-sm font-semibold">Forum</span>
+        <Link href="/parametres" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-300 transition-all flex items-center gap-2">
+          <span className="text-xl">⚙️</span>
+          <span className="text-sm font-semibold">Parametres</span>
         </Link>
       </div>
 
-      {/* Account info */}
       <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <h3 className="font-bold mb-3">Compte</h3>
         <div className="flex items-center justify-between py-2.5 border-b border-gray-100">
