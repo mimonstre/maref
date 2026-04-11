@@ -1,42 +1,10 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites } from "@/lib/queries";
 import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites, recordView } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import type { Offer } from "@/lib/data";
-
-function ScoreCircle({ score, size = "md" }: { score: number; size?: string }) {
-  const color =
-    score >= 85 ? "bg-emerald-700" : score >= 72 ? "bg-emerald-600" : score >= 58 ? "bg-lime-600" : score >= 42 ? "bg-yellow-500" : score >= 25 ? "bg-orange-500" : "bg-red-600";
-  const dim = size === "sm" ? "w-10 h-10 text-sm" : size === "lg" ? "w-20 h-20 text-2xl" : "w-14 h-14 text-lg";
-  return <div className={dim + " " + color + " rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-sm"}>{score}</div>;
-}
-
-function StatusBadge({ score }: { score: number }) {
-  const s =
-    score >= 85 ? { l: "Excellent choix", c: "bg-emerald-100 text-emerald-800" }
-    : score >= 72 ? { l: "Tres bon choix", c: "bg-emerald-50 text-emerald-700" }
-    : score >= 58 ? { l: "Bon choix", c: "bg-lime-100 text-lime-700" }
-    : score >= 42 ? { l: "A surveiller", c: "bg-yellow-100 text-yellow-700" }
-    : score >= 25 ? { l: "Risque", c: "bg-orange-100 text-orange-700" }
-    : { l: "Peu pertinent", c: "bg-red-100 text-red-700" };
-  return <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + s.c}>{s.l}</span>;
-}
-
-function AxisBar({ label, value }: { label: string; value: number }) {
-  const color =
-    value >= 85 ? "bg-emerald-700" : value >= 72 ? "bg-emerald-600" : value >= 58 ? "bg-lime-600" : value >= 42 ? "bg-yellow-500" : value >= 25 ? "bg-orange-500" : "bg-red-600";
-  return (
-    <div className="flex items-center gap-2.5 mb-2">
-      <span className="w-24 text-xs font-semibold text-gray-600 shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className={"h-full rounded-full transition-all duration-700 " + color} style={{ width: value + "%" }}></div>
-      </div>
-      <span className={"w-8 text-xs font-bold text-right " + (value >= 58 ? "text-emerald-700" : value >= 42 ? "text-yellow-600" : "text-orange-600")}>{value}</span>
-    </div>
-  );
-}
+import { ScoreCircle, StatusBadge, AxisBar, MimoCard, Toast, LoadingSkeleton } from "@/components/shared/Score";
 
 const PEFAS_INFO: Record<string, { name: string; desc: string }> = {
   P: { name: "Pertinence", desc: "Adequation entre le produit et votre besoin reel : usage, espace, contraintes techniques, attentes fonctionnelles." },
@@ -58,16 +26,20 @@ export default function OfferDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectMessage, setProjectMessage] = useState("");
-  const [favMessage, setFavMessage] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+
+  function showToast(msg: string) {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 2000);
+  }
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       const o = await getOfferById(params.id as string);
-      if (o) { recordView(o.id); }
       setOffer(o);
       if (o) {
+        recordView(o.id);
         const all = await getOffers({ subcategory: o.subcategory });
         setAlternatives(all.filter((a: Offer) => a.id !== o.id).slice(0, 3));
         const favs = await getFavorites();
@@ -85,34 +57,32 @@ export default function OfferDetailPage() {
     if (isFav) {
       await removeFavorite(offer.id);
       setIsFav(false);
-      setFavMessage("Retire des favoris");
+      showToast("Retire des favoris");
     } else {
       await addFavorite(offer.id);
       setIsFav(true);
-      setFavMessage("Ajoute aux favoris");
+      showToast("Ajoute aux favoris");
     }
-    setTimeout(() => setFavMessage(""), 2000);
   }
 
   async function addToProject(projectId: string) {
     if (!offer) return;
     const { data: existing } = await supabase.from("project_offers").select("id").eq("project_id", projectId).eq("offer_id", offer.id);
     if (existing && existing.length > 0) {
-      setProjectMessage("Deja dans ce projet");
+      showToast("Deja dans ce projet");
     } else {
       await supabase.from("project_offers").insert({ project_id: projectId, offer_id: offer.id });
       const proj = projects.find((p) => p.id === projectId);
-      setProjectMessage("Ajoute a " + (proj?.name || "projet"));
+      showToast("Ajoute a " + (proj?.name || "projet"));
     }
     setShowProjectMenu(false);
-    setTimeout(() => setProjectMessage(""), 2000);
   }
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-20"></div>
-        <div className="flex gap-4">
+      <div className="space-y-4">
+        <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+        <div className="flex gap-4 animate-pulse">
           <div className="w-24 h-24 bg-gray-200 rounded-xl"></div>
           <div className="flex-1 space-y-2">
             <div className="h-3 bg-gray-200 rounded w-1/3"></div>
@@ -120,7 +90,7 @@ export default function OfferDetailPage() {
             <div className="h-3 bg-gray-200 rounded w-1/2"></div>
           </div>
         </div>
-        <div className="h-24 bg-gray-200 rounded-xl"></div>
+        <LoadingSkeleton count={2} type="simple" />
       </div>
     );
   }
@@ -146,24 +116,13 @@ export default function OfferDetailPage() {
 
   return (
     <div className="space-y-4">
-      {/* Toast messages */}
-      {favMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
-          {favMessage}
-        </div>
-      )}
-      {projectMessage && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
-          {projectMessage}
-        </div>
-      )}
+      <Toast message={toastMsg} />
 
       <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
         Retour
       </button>
 
-      {/* Identity */}
       <div className="flex gap-4 items-start">
         <div className="w-24 h-24 rounded-xl bg-gray-100 flex items-center justify-center text-4xl shrink-0">{catIcon}</div>
         <div>
@@ -174,7 +133,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Price */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -191,7 +149,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Score */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center gap-4">
           <ScoreCircle score={offer.score} size="lg" />
@@ -206,34 +163,26 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Mimo */}
-      <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-xl p-4">
-        <span className="absolute -top-2 left-3 bg-emerald-700 text-white text-[0.65rem] font-bold px-2 py-0.5 rounded">Mimo</span>
-        <p className="text-sm text-gray-800 mt-1">{mimoLong}</p>
-      </div>
+      <MimoCard text={mimoLong} />
 
-      {/* PEFAS */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h3 className="font-bold text-sm mb-3">Analyse PEFAS</h3>
         {Object.entries(PEFAS_INFO).map(([key, info]) => (
-          <div key={key} className="cursor-pointer" onClick={() => setActiveAxis(activeAxis === key ? null : key)}>
-            <AxisBar label={info.name} value={offer.pefas[key as keyof typeof offer.pefas]} />
+          <div key={key}>
+            <AxisBar label={info.name} value={offer.pefas[key as keyof typeof offer.pefas]} onClick={() => setActiveAxis(activeAxis === key ? null : key)} />
             {activeAxis === key && (
               <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-xs text-gray-600">{info.desc}</p>
-                <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-lg p-3 mt-2">
-                  <span className="absolute -top-2 left-2 bg-emerald-700 text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded">Mimo</span>
-                  <p className="text-xs text-gray-700 mt-1">
-                    Sur l axe {info.name}, cette offre obtient {offer.pefas[key as keyof typeof offer.pefas]}/100. {offer.pefas[key as keyof typeof offer.pefas] >= 70 ? "C est un point fort." : offer.pefas[key as keyof typeof offer.pefas] >= 50 ? "Resultat correct, des alternatives pourraient faire mieux." : "Point d attention — verifiez les details."}
-                  </p>
-                </div>
+                <MimoCard
+                  compact
+                  text={"Sur l axe " + info.name + ", cette offre obtient " + offer.pefas[key as keyof typeof offer.pefas] + "/100. " + (offer.pefas[key as keyof typeof offer.pefas] >= 70 ? "C est un point fort." : offer.pefas[key as keyof typeof offer.pefas] >= 50 ? "Resultat correct, des alternatives pourraient faire mieux." : "Point d attention — verifiez les details.")}
+                />
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Reasons */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-emerald-700">Points forts</h4>
         {offer.reasons.map((r, i) => (
@@ -244,7 +193,6 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
-      {/* Vigilances */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-2 text-yellow-600">Points de vigilance</h4>
         {offer.vigilances.map((v, i) => (
@@ -255,7 +203,6 @@ export default function OfferDetailPage() {
         ))}
       </div>
 
-      {/* Extended cost */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <h4 className="font-bold text-sm mb-3">Cout total etendu</h4>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -272,7 +219,6 @@ export default function OfferDetailPage() {
         </div>
       </div>
 
-      {/* Alternatives */}
       {alternatives.length > 0 && (
         <div>
           <h3 className="font-bold text-sm mb-3">Alternatives</h3>
@@ -292,7 +238,6 @@ export default function OfferDetailPage() {
         </div>
       )}
 
-      {/* Actions */}
       <div className="flex gap-2 flex-wrap">
         <button onClick={toggleFav} className={"text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors " + (isFav ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
           {isFav ? "Sauvegarde ❤️" : "Sauvegarder"}
