@@ -2,6 +2,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites } from "@/lib/queries";
+import { getOfferById, getOffers, addFavorite, removeFavorite, getFavorites, recordView } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
 import type { Offer } from "@/lib/data";
 
@@ -64,6 +65,7 @@ export default function OfferDetailPage() {
     async function load() {
       setLoading(true);
       const o = await getOfferById(params.id as string);
+      if (o) { recordView(o.id); }
       setOffer(o);
       if (o) {
         const all = await getOffers({ subcategory: o.subcategory });

@@ -1,18 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { getViewHistory } from "@/lib/queries";
 import { supabase } from "@/lib/supabase";
-import { MimoCard, EmptyState, LoadingSkeleton } from "@/components/shared/Score";
+import { ScoreCircle, StatusBadge, MimoCard, EmptyState, LoadingSkeleton } from "@/components/shared/Score";
 
-type Notification = {
+type HistoryItem = {
   id: string;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  link: string | null;
-  created_at: string;
+  offer_id: string;
+  product: string;
+  brand: string;
+  price: number;
+  score: number;
+  category: string;
+  merchant: string;
+  viewed_at: string;
 };
 
 function timeAgo(date: string) {
@@ -26,139 +28,97 @@ function timeAgo(date: string) {
   return then.toLocaleDateString("fr-FR");
 }
 
-function getNotifIcon(type: string) {
-  switch (type) {
-    case "price": return "💰";
-    case "project": return "📁";
-    case "mimo": return "🤖";
-    case "guide": return "📚";
-    case "forum": return "💬";
-    case "badge": return "🏆";
-    case "level": return "⭐";
-    case "welcome": return "👋";
-    default: return "🔔";
-  }
-}
-
-export default function NotificationsPage() {
-  const { user } = useAuth();
+export default function HistoriquePage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (data && data.length > 0) {
-        setNotifications(data);
-      } else {
-        // Default notifications if table is empty
-        setNotifications([
-          { id: "n1", type: "welcome", title: "Bienvenue sur MAREF", message: "Votre compte est cree. Explorez les offres et commencez a structurer vos decisions d achat.", read: false, link: "/explorer", created_at: new Date().toISOString() },
-          { id: "n2", type: "mimo", title: "Conseil Mimo", message: "Commencez par completer votre profil pour obtenir des scores personnalises selon vos criteres.", read: false, link: "/profil", created_at: new Date(Date.now() - 3600000).toISOString() },
-          { id: "n3", type: "guide", title: "Nouveau module disponible", message: "Le module Comprendre le Score MAREF est disponible. Apprenez comment fonctionne l analyse multi-axes.", read: false, link: "/guide", created_at: new Date(Date.now() - 7200000).toISOString() },
-          { id: "n4", type: "price", title: "Baisse de prix detectee", message: "Le Samsung EcoClean 8kg a baisse de 12% chez Boulanger. Score MAREF : 82/100.", read: true, link: "/explorer", created_at: new Date(Date.now() - 86400000).toISOString() },
-          { id: "n5", type: "project", title: "Rappel projet", message: "Votre projet n a pas ete mis a jour depuis 3 jours. Ajoutez de nouvelles offres pour affiner votre analyse.", read: true, link: "/projets", created_at: new Date(Date.now() - 172800000).toISOString() },
-          { id: "n6", type: "forum", title: "Nouvelle reponse", message: "Quelqu un a repondu a votre discussion sur le forum. Consultez les nouvelles contributions.", read: true, link: "/forum", created_at: new Date(Date.now() - 259200000).toISOString() },
-          { id: "n7", type: "badge", title: "Badge debloque", message: "Felicitations ! Vous avez debloque le badge Explorateur en consultant 5 fiches offres.", read: true, link: "/profil", created_at: new Date(Date.now() - 345600000).toISOString() },
-          { id: "n8", type: "mimo", title: "Analyse Mimo", message: "D apres votre profil, les lave-linge avec pompe a chaleur offrent le meilleur rapport cout total sur 5 ans.", read: true, link: "/assistant", created_at: new Date(Date.now() - 432000000).toISOString() },
-        ]);
-      }
+      const data = await getViewHistory();
+      setHistory(data);
       setLoading(false);
     }
     load();
   }, []);
 
-  function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  async function clearHistory() {
+    await supabase.from("view_history").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    setHistory([]);
   }
 
-  function markAsRead(id: string) {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-  }
-
-  function handleClick(notif: Notification) {
-    markAsRead(notif.id);
-    if (notif.link) router.push(notif.link);
-  }
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const filtered = filter === "all" ? notifications : notifications.filter((n) => !n.read);
+  // Group by date
+  const grouped: Record<string, HistoryItem[]> = {};
+  history.forEach((h) => {
+    const date = new Date(h.viewed_at);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    let label = date.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+    if (date.toDateString() === today.toDateString()) label = "Aujourd hui";
+    if (date.toDateString() === yesterday.toDateString()) label = "Hier";
+    if (!grouped[label]) grouped[label] = [];
+    grouped[label].push(h);
+  });
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Notifications</h2>
-          <p className="text-sm text-gray-500">
-            {unreadCount > 0 ? unreadCount + " non lue" + (unreadCount > 1 ? "s" : "") : "Tout est a jour"}
-          </p>
+          <h2 className="text-xl font-bold">Historique</h2>
+          <p className="text-sm text-gray-500">{history.length} consultation{history.length > 1 ? "s" : ""}</p>
         </div>
-        {unreadCount > 0 && (
-          <button onClick={markAllRead} className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
-            Tout marquer lu
+        {history.length > 0 && (
+          <button onClick={clearHistory} className="text-xs font-semibold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors">
+            Effacer
           </button>
         )}
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilter("all")}
-          className={"text-xs font-semibold px-3 py-1.5 rounded-full transition-colors " + (filter === "all" ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-emerald-300")}
-        >
-          Toutes ({notifications.length})
-        </button>
-        <button
-          onClick={() => setFilter("unread")}
-          className={"text-xs font-semibold px-3 py-1.5 rounded-full transition-colors " + (filter === "unread" ? "bg-emerald-700 text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-emerald-300")}
-        >
-          Non lues ({unreadCount})
-        </button>
-      </div>
-
-      <MimoCard text={"Vous avez " + unreadCount + " notification" + (unreadCount > 1 ? "s" : "") + " non lue" + (unreadCount > 1 ? "s" : "") + ". " + (unreadCount > 0 ? "Consultez-les pour ne rien manquer." : "Tout est a jour, continuez vos analyses.")} />
+      <MimoCard text="Votre historique vous permet de retrouver les offres consultees recemment. Reprenez votre analyse la ou vous l avez laissee." />
 
       {loading ? (
-        <LoadingSkeleton count={5} type="simple" />
-      ) : filtered.length === 0 ? (
+        <LoadingSkeleton count={4} />
+      ) : history.length === 0 ? (
         <EmptyState
-          icon="🔔"
-          title="Aucune notification"
-          description={filter === "unread" ? "Toutes vos notifications ont ete lues." : "Vous n avez pas encore de notifications."}
+          icon="🕐"
+          title="Aucun historique"
+          description="Les offres que vous consultez apparaitront ici."
+          action={() => router.push("/explorer")}
+          actionLabel="Explorer les offres"
         />
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
-          {filtered.map((n) => (
-            <div
-              key={n.id}
-              onClick={() => handleClick(n)}
-              className={"flex gap-3 p-4 transition-colors cursor-pointer " + (n.read ? "hover:bg-gray-50" : "bg-emerald-50/30 hover:bg-emerald-50/50")}
-            >
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-lg shrink-0">
-                  {getNotifIcon(n.type)}
-                </div>
-                {!n.read && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <p className={"text-sm truncate " + (n.read ? "font-medium" : "font-bold")}>{n.title}</p>
-                  <span className="text-[0.65rem] text-gray-400 shrink-0">{timeAgo(n.created_at)}</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.message}</p>
-                {n.link && (
-                  <span className="inline-block text-[0.65rem] font-semibold text-emerald-700 mt-1">Voir →</span>
-                )}
+        <div className="space-y-5">
+          {Object.entries(grouped).map(([date, items]) => (
+            <div key={date}>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{date}</h3>
+              <div className="space-y-2">
+                {items.map((h) => (
+                  <div
+                    key={h.id}
+                    onClick={() => router.push("/explorer/" + h.offer_id)}
+                    className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
+                  >
+                    <div className="w-14 h-14 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-emerald-50 transition-colors">
+                      {h.category === "electromenager" ? "🏠" : h.category === "froid" ? "❄️" : "📺"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-[0.7rem] text-gray-400 font-medium uppercase tracking-wide">{h.brand}</p>
+                          <p className="font-semibold text-sm truncate group-hover:text-emerald-700 transition-colors">{h.product}</p>
+                        </div>
+                        <ScoreCircle score={h.score} size="sm" />
+                      </div>
+                      <p className="text-xs text-gray-400">{h.merchant} · {h.price.toLocaleString("fr-FR")} EUR</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <StatusBadge score={h.score} />
+                        <span className="text-[0.65rem] text-gray-400">{timeAgo(h.viewed_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}

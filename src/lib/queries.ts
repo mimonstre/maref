@@ -121,6 +121,13 @@ export async function getProjects() {
 }
 
 export async function addFavorite(offerId: string) {
+  const { data: existing } = await supabase
+    .from("favorites")
+    .select("id")
+    .eq("offer_id", offerId);
+
+  if (existing && existing.length > 0) return true;
+
   const { error } = await supabase
     .from("favorites")
     .insert({ offer_id: offerId });
@@ -143,4 +150,48 @@ export async function getFavorites() {
 
   if (error) return [];
   return data.map((f: any) => f.offer_id);
+}
+
+export async function recordView(offerId: string) {
+  try {
+    await supabase.from("view_history").insert({ offer_id: offerId });
+  } catch (e) {
+    // silent fail
+  }
+}
+
+export async function getViewHistory() {
+  const { data } = await supabase
+    .from("view_history")
+    .select("id, offer_id, viewed_at")
+    .order("viewed_at", { ascending: false })
+    .limit(30);
+
+  if (!data || data.length === 0) return [];
+
+  const offerIds = [...new Set(data.map((h: any) => h.offer_id))];
+  const { data: offersData } = await supabase
+    .from("offers")
+    .select("id, product, brand, price, score, category, merchant")
+    .in("id", offerIds);
+
+  const offersMap: Record<string, any> = {};
+  if (offersData) offersData.forEach((o: any) => { offersMap[o.id] = o; });
+
+  return data
+    .filter((h: any) => offersMap[h.offer_id])
+    .map((h: any) => ({
+      id: h.id,
+      offer_id: h.offer_id,
+      viewed_at: h.viewed_at,
+      ...offersMap[h.offer_id],
+    }));
+}
+
+export async function getUnreadNotificationCount() {
+  const { count } = await supabase
+    .from("notifications")
+    .select("*", { count: "exact", head: true })
+    .eq("read", false);
+  return count || 0;
 }
