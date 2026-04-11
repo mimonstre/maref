@@ -383,7 +383,7 @@ export default function OfferDetailPage() {
           <button onClick={toggleFav} className={"flex-1 text-sm font-semibold px-4 py-3 rounded-xl transition-colors " + (isFav ? "bg-emerald-700 text-white shadow-md" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
             {isFav ? "Sauvegarde ❤️" : "❤️ Sauvegarder"}
           </button>
-          <button onClick={() => router.push("/comparer")} className="flex-1 text-sm font-semibold px-4 py-3 rounded-xl bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
+          <button onClick={() => router.push("/comparer?ids=" + offer.id)} className="flex-1 text-sm font-semibold px-4 py-3 rounded-xl bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
             ⚖️ Comparer
           </button>
         </div>
