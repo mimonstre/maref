@@ -1,22 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { ScoreCircle } from "@/components/shared/Score";
+import { getCategoryIcon } from "@/lib/categories";
 import { getFavorites, removeFavorite, getOffers } from "@/lib/queries";
 import type { Offer } from "@/lib/data";
 
-function ScoreCircle({ score }: { score: number }) {
-  const color =
-    score >= 85 ? "bg-emerald-700" : score >= 72 ? "bg-emerald-600" : score >= 58 ? "bg-lime-600" : score >= 42 ? "bg-yellow-500" : score >= 25 ? "bg-orange-500" : "bg-red-600";
-  return (
-    <div className={"w-10 h-10 text-sm " + color + " rounded-full flex items-center justify-center text-white font-bold shrink-0"}>
-      {score}
-    </div>
-  );
-}
-
 export default function FavorisPage() {
-  const { user } = useAuth();
   const router = useRouter();
   const [favOffers, setFavOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +26,7 @@ export default function FavorisPage() {
   }
 
   useEffect(() => {
-    loadFavorites();
+    void Promise.resolve().then(loadFavorites);
   }, []);
 
   async function handleRemove(offerId: string) {
@@ -75,7 +65,7 @@ export default function FavorisPage() {
           {favOffers.map((o) => (
             <div key={o.id} className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 hover:shadow-md transition-all">
               <div onClick={() => router.push("/explorer/" + o.id)} className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center text-2xl shrink-0 cursor-pointer">
-                {o.category === "electromenager" ? "🏠" : o.category === "froid" ? "❄️" : "📺"}
+                {getCategoryIcon(o.category)}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">

@@ -2,7 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getProjectsWithOffers, type Project } from "@/features/projects/api";
+import { deriveUserJourney } from "@/lib/core";
+import { generateMimo } from "@/lib/mimo/engine";
 import { getOffers, getFavorites } from "@/lib/queries";
+import { analyzeProject } from "@/lib/projects/service";
+import { averageOfferScore, getOfferDisplayScore, rankOffersByScore } from "@/lib/score/engine";
 import { supabase } from "@/lib/supabase";
 import type { Offer } from "@/lib/data";
 import Link from "next/link";
@@ -15,8 +20,9 @@ export default function HomePage() {
   const [favCount, setFavCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
   const [topicCount, setTopicCount] = useState(0);
-  const [replyCount, setReplyCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
 
   useEffect(() => {
     async function load() {
@@ -24,22 +30,21 @@ export default function HomePage() {
       setAllOffers(all);
       const favs = await getFavorites();
       setFavCount(favs.length);
-      const { count: pc } = await supabase.from("projects").select("*", { count: "exact", head: true });
-      setProjectCount(pc || 0);
+      const projectsData = await getProjectsWithOffers();
+      setProjects(projectsData.projects);
+      setProjectOffers(projectsData.projectOffers);
+      setProjectCount(projectsData.projects.length);
       const { count: tc } = await supabase.from("forum_topics").select("*", { count: "exact", head: true });
       setTopicCount(tc || 0);
-      const { count: rc } = await supabase.from("forum_replies").select("*", { count: "exact", head: true });
-      setReplyCount(rc || 0);
       setLoading(false);
     }
     load();
   }, []);
 
   const userName = user?.user_metadata?.name || "Utilisateur";
-  const topOffers = [...allOffers].sort((a, b) => b.score - a.score).slice(0, 5);
+  const topOffers = rankOffersByScore(allOffers).slice(0, 5);
   const cheapOffers = [...allOffers].sort((a, b) => a.price - b.price).slice(0, 3);
-  const recentOffers = [...allOffers].slice(0, 3);
-  const avgScore = allOffers.length > 0 ? Math.round(allOffers.reduce((s, o) => s + o.score, 0) / allOffers.length) : 0;
+  const avgScore = averageOfferScore(allOffers);
   const catCounts = {
     electromenager: allOffers.filter(o => o.category === "electromenager").length,
     froid: allOffers.filter(o => o.category === "froid").length,
@@ -47,6 +52,34 @@ export default function HomePage() {
   };
   const merchants = [...new Set(allOffers.map(o => o.merchant))];
   const brands = [...new Set(allOffers.map(o => o.brand))];
+  const bestProject = projects
+    .map((project) => ({
+      project,
+      analysis: analyzeProject({
+        projectId: project.id,
+        projectName: project.name,
+        projectCategory: project.category,
+        projectBudget: project.budget,
+        projectObjective: project.objective,
+        existingOffers: projectOffers[project.id] || [],
+      }),
+    }))
+    .filter((item) => item.analysis.totalOffers > 0)
+    .sort((a, b) => b.analysis.averageScore - a.analysis.averageScore)[0];
+  const dashboardMimo = bestProject
+    ? generateMimo({
+        mode: "dashboard",
+        project: {
+          projectId: bestProject.project.id,
+          projectName: bestProject.project.name,
+          projectCategory: bestProject.project.category,
+          projectBudget: bestProject.project.budget,
+          projectObjective: bestProject.project.objective,
+          existingOffers: projectOffers[bestProject.project.id] || [],
+        },
+      })
+    : "Bienvenue " + userName + ". Creez un projet ou ajoutez vos premieres offres pour obtenir une recommandation contextualisee.";
+  const journey = deriveUserJourney(projects, projectOffers);
 
   // ========== LANDING ==========
   if (!authLoading && !user) {
@@ -193,7 +226,77 @@ export default function HomePage() {
         </div>
       </div>
 
-      <MimoCard text={"Bienvenue " + userName + ". Vous avez " + favCount + " offre" + (favCount > 1 ? "s" : "") + " en favoris et " + projectCount + " projet" + (projectCount > 1 ? "s" : "") + ". " + (allOffers.length > 0 ? "Le score moyen des offres disponibles est de " + avgScore + "/100." : "Explorez les offres pour commencer.") + " " + (topicCount > 0 ? topicCount + " discussion" + (topicCount > 1 ? "s" : "") + " active" + (topicCount > 1 ? "s" : "") + " sur le forum." : "")} />
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[0.7rem] font-bold text-emerald-700 uppercase tracking-wide">Parcours decisionnel</p>
+            <h3 className="font-bold mt-1">{journey.title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{journey.description}</p>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold shrink-0">
+            {journey.progress}/5
+          </div>
+        </div>
+        <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full bg-emerald-600 rounded-full" style={{ width: journey.progress * 20 + "%" }}></div>
+        </div>
+        <p className="text-xs text-gray-500 mt-3">{journey.hint}</p>
+        <div className="flex gap-2 mt-4 flex-wrap">
+          <Link href={journey.primaryAction.href} className="text-xs font-semibold bg-emerald-700 text-white px-3 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
+            {journey.primaryAction.label}
+          </Link>
+          {journey.secondaryAction && (
+            <Link href={journey.secondaryAction.href} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-emerald-300 transition-colors">
+              {journey.secondaryAction.label}
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <MimoCard text={dashboardMimo} />
+
+      {bestProject && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[0.7rem] font-bold text-emerald-700 uppercase tracking-wide">Projet prioritaire</p>
+              <h3 className="font-bold mt-1">{bestProject.project.name}</h3>
+              <p className="text-sm text-gray-500 mt-1">{bestProject.project.objective || "Projet en cours d analyse."}</p>
+            </div>
+            {bestProject.analysis.averageScore > 0 && <ScoreCircle score={bestProject.analysis.averageScore} />}
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-sm font-bold text-emerald-700">{bestProject.analysis.totalOffers}</p>
+              <p className="text-[0.65rem] text-gray-500">Offres</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-sm font-bold text-emerald-700">{bestProject.analysis.budgetStatus}</p>
+              <p className="text-[0.65rem] text-gray-500">Budget</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3 text-center">
+              <p className="text-sm font-bold text-emerald-700">
+                {bestProject.analysis.bestOffer ? bestProject.analysis.bestOffer.brand : "-"}
+              </p>
+              <p className="text-[0.65rem] text-gray-500">Meilleur choix</p>
+            </div>
+          </div>
+          <div className="relative bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-3 mt-4">
+            <span className="absolute -top-2 left-3 bg-emerald-700 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded">Mimo</span>
+            <p className="text-xs text-gray-700 mt-2 leading-relaxed">{bestProject.analysis.recommendation}</p>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Link href="/projets" className="text-xs font-semibold bg-emerald-700 text-white px-3 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
+              Ouvrir le projet
+            </Link>
+            {bestProject.analysis.totalOffers >= 2 && (
+              <Link href={"/comparer?project=" + bestProject.project.id + "&ids=" + (projectOffers[bestProject.project.id] || []).map((offer) => offer.id).join(",")} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-emerald-300 transition-colors">
+                Comparer maintenant
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-4 gap-2.5">
         {[{ i: "🔍", l: "Explorer", h: "/explorer", c: "hover:border-emerald-300" }, { i: "⚖️", l: "Comparer", h: "/comparer", c: "hover:border-blue-300" }, { i: "❤️", l: "Favoris", h: "/favoris", c: "hover:border-red-300" }, { i: "📁", l: "Projets", h: "/projets", c: "hover:border-yellow-300" }].map(a => (
@@ -237,12 +340,12 @@ export default function HomePage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
                     <div><p className="text-[0.7rem] text-gray-400 font-medium uppercase tracking-wide">{o.brand}</p><p className="font-semibold text-sm truncate group-hover:text-emerald-700 transition-colors">{o.product}</p></div>
-                    <ScoreCircle score={o.score} size="sm" />
+                    <ScoreCircle score={getOfferDisplayScore(o)} size="sm" />
                   </div>
                   <p className="text-xs text-gray-400">{o.merchant} · {o.availability}</p>
                   <div className="flex items-center justify-between mt-1.5">
                     <div><span className="font-bold">{o.price.toLocaleString("fr-FR")} EUR</span>{o.barredPrice && <span className="text-xs text-gray-400 line-through ml-1.5">{o.barredPrice.toLocaleString("fr-FR")} EUR</span>}</div>
-                    <StatusBadge score={o.score} />
+                    <StatusBadge score={getOfferDisplayScore(o)} />
                   </div>
                 </div>
               </div>

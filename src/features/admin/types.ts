@@ -1,0 +1,48 @@
+export type AdminOffer = {
+  id: string;
+  product: string;
+  brand: string;
+  model: string;
+  category: string;
+  subcategory: string;
+  merchant: string;
+  price: number;
+  barred_price: number | null;
+  availability: string;
+  delivery: string;
+  warranty: string;
+  score: number;
+  status: string;
+  status_color: string;
+  confidence: string;
+  freshness: string;
+  pefas_p: number;
+  pefas_e: number;
+  pefas_f: number;
+  pefas_a: number;
+  pefas_s: number;
+  mimo_short: string;
+  reasons: string[];
+  vigilances: string[];
+};
+
+export type AdminOfferForm = {
+  product: string;
+  brand: string;
+  model: string;
+  category: string;
+  subcategory: string;
+  merchant: string;
+  price: string;
+  barredPrice: string;
+  availability: string;
+  delivery: string;
+  warranty: string;
+  pefas_p: string;
+  pefas_e: string;
+  pefas_f: string;
+  pefas_a: string;
+  pefas_s: string;
+  reasons: string;
+  vigilances: string;
+};

@@ -3,17 +3,24 @@ import Link from "next/link";
 import { Bell, MessageSquare, Heart } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { signOut } from "@/lib/auth";
+import { getUnreadNotificationCount } from "@/lib/queries";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function TopBar() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [showMenu, setShowMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const initials = user?.user_metadata?.name
     ? user.user_metadata.name.charAt(0).toUpperCase()
     : "?";
+
+  useEffect(() => {
+    if (!user) return;
+    getUnreadNotificationCount().then(setUnreadCount);
+  }, [user]);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-white/95 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 z-50">
@@ -56,10 +63,10 @@ export default function TopBar() {
             <Link href="/assistant" className="p-2 rounded-full hover:bg-gray-100 transition-colors" title="Assistant Mimo">
               <MessageSquare className="w-[18px] h-[18px] text-gray-500" />
             </Link>
-            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" title="Notifications">
+            <Link href="/notifications" className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" title="Notifications">
               <Bell className="w-[18px] h-[18px] text-gray-500" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+              {unreadCount > 0 && <span className="absolute top-1 right-1 min-w-4 h-4 px-1 bg-red-500 rounded-full text-[0.55rem] text-white font-bold flex items-center justify-center">{Math.min(unreadCount, 9)}</span>}
+            </Link>
             <div className="relative ml-1">
               <button
                 onClick={() => setShowMenu(!showMenu)}

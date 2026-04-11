@@ -1,6 +1,7 @@
+import { getScoreColorClass, getScoreStatus } from "@/lib/score";
+
 export function ScoreCircle({ score, size = "md" }: { score: number; size?: string }) {
-  const color =
-    score >= 85 ? "bg-emerald-700" : score >= 72 ? "bg-emerald-600" : score >= 58 ? "bg-lime-600" : score >= 42 ? "bg-yellow-500" : score >= 25 ? "bg-orange-500" : "bg-red-600";
+  const color = getScoreColorClass(score);
   const dim =
     size === "xs" ? "w-8 h-8 text-xs"
     : size === "sm" ? "w-10 h-10 text-sm"
@@ -16,19 +17,12 @@ export function ScoreCircle({ score, size = "md" }: { score: number; size?: stri
 }
 
 export function StatusBadge({ score }: { score: number }) {
-  const s =
-    score >= 85 ? { l: "Excellent choix", c: "bg-emerald-100 text-emerald-800" }
-    : score >= 72 ? { l: "Tres bon choix", c: "bg-emerald-50 text-emerald-700" }
-    : score >= 58 ? { l: "Bon choix", c: "bg-lime-100 text-lime-700" }
-    : score >= 42 ? { l: "A surveiller", c: "bg-yellow-100 text-yellow-700" }
-    : score >= 25 ? { l: "Risque", c: "bg-orange-100 text-orange-700" }
-    : { l: "Peu pertinent", c: "bg-red-100 text-red-700" };
-  return <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + s.c}>{s.l}</span>;
+  const status = getScoreStatus(score);
+  return <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + status.className}>{status.label}</span>;
 }
 
 export function AxisBar({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
-  const color =
-    value >= 85 ? "bg-emerald-700" : value >= 72 ? "bg-emerald-600" : value >= 58 ? "bg-lime-600" : value >= 42 ? "bg-yellow-500" : value >= 25 ? "bg-orange-500" : "bg-red-600";
+  const color = getScoreColorClass(value);
   return (
     <div className={"flex items-center gap-2.5 mb-2" + (onClick ? " cursor-pointer" : "")} onClick={onClick}>
       <span className="w-24 text-xs font-semibold text-gray-600 shrink-0">{label}</span>

@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthChange } from "@/lib/auth";
+import { getUser, onAuthChange } from "@/lib/auth";
 
 type User = {
   id: string;
@@ -22,6 +22,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    getUser().then((currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
     const { data } = onAuthChange((u) => {
       setUser(u);
       setLoading(false);
