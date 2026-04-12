@@ -106,9 +106,9 @@ export function deriveUserJourney(projects: ProjectLike[], projectOffers: Record
   return {
     stage: "decision",
     progress: 5,
-    title: "Votre projet est pret pour trancher",
-    description: "Le projet " + decisionProject.project.name + " a suffisamment d'options pour une recommandation finale contextualisee.",
-    hint: "MAREF peut maintenant vous aider a isoler le choix le plus adapte, pas juste le mieux note.",
+    title: "Le projet est assez mature pour arbitrer",
+    description: "Le projet " + decisionProject.project.name + " contient assez d'options pour passer a un arbitrage final plus rigoureux.",
+    hint: "Comparez les compromis, puis retenez l'option la plus cohérente avec votre contexte plutôt que la plus flatteuse.",
     primaryAction: { label: "Voir la comparaison finale", href: buildCompareHref(decisionProject.project.id, decisionProject.offers) },
     secondaryAction: { label: "Revenir au projet", href: "/projets" },
     activeProjectId: decisionProject.project.id,

@@ -24,6 +24,25 @@ const PEFAS_LABELS: Record<string, string> = {
   S: "Stabilite",
 };
 
+function getComparableSpecRows(offers: Array<Offer & { contextualScore: number | null }>) {
+  const specKeys = Array.from(new Set(offers.flatMap((offer) => Object.keys(offer.specs || {}))));
+
+  return specKeys
+    .map((key) => {
+      const values = offers.map((offer) => offer.specs?.[key] || "—");
+      const uniqueValues = Array.from(new Set(values.filter((value) => value !== "—")));
+
+      return {
+        key,
+        values,
+        useful: uniqueValues.length > 0,
+        differs: uniqueValues.length > 1,
+      };
+    })
+    .filter((row) => row.useful)
+    .sort((a, b) => Number(b.differs) - Number(a.differs));
+}
+
 type CompareFamilySectionProps = {
   group: CompareGroup;
   offers: Array<Offer & { contextualScore: number | null }>;
@@ -70,6 +89,7 @@ export default function CompareFamilySection({
           mode: "comparison",
         })
       : "Ajoutez au moins une autre offre de cette famille pour obtenir une comparaison exploitable.";
+  const technicalRows = getComparableSpecRows(rankedOffers);
 
   return (
     <section className="premium-surface space-y-5 rounded-[30px] p-6">
@@ -243,6 +263,38 @@ export default function CompareFamilySection({
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="premium-card rounded-[26px] p-4">
+            <h4 className="mb-3 text-sm font-bold">Comparatif technique</h4>
+            {technicalRows.length === 0 ? (
+              <NoDataBlock
+                title="Données techniques insuffisantes"
+                description="Les fiches de cette famille ne partagent pas encore assez de données techniques réelles pour une comparaison détaillée."
+              />
+            ) : (
+              <div className="space-y-2">
+                {technicalRows.slice(0, 8).map((row) => (
+                  <div key={row.key} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold text-gray-700">{row.key}</p>
+                      <span className={"rounded-full px-2 py-0.5 text-[0.65rem] font-semibold " + (row.differs ? "bg-blue-100 text-blue-800" : "bg-gray-200 text-gray-600")}>
+                        {row.differs ? "Écart visible" : "Valeurs proches"}
+                      </span>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {rankedOffers.map((offer, index) => (
+                        <div key={offer.id + row.key} className={"rounded-lg border px-3 py-2 " + (index === 0 ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-white")}>
+                          <p className="text-[0.65rem] font-semibold text-gray-500">{offer.brand}</p>
+                          <p className="truncate text-xs font-bold text-gray-900">{offer.product}</p>
+                          <p className="mt-1 text-xs text-gray-600">{offer.specs?.[row.key] || "Non documenté"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="premium-card rounded-[26px] p-4">

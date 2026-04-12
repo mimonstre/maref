@@ -136,8 +136,6 @@ export default function OfferDetailPage() {
     } else {
       showToast("Ajoute a la comparaison " + result.family.label);
     }
-
-    router.push("/comparer");
   }
 
   if (loading) {
@@ -247,8 +245,13 @@ export default function OfferDetailPage() {
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex gap-4 items-start">
-          <div className="w-24 h-24 rounded-xl bg-gray-50 flex items-center justify-center text-4xl shrink-0">
-            {categoryIcon}
+          <div className="w-24 h-24 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center text-4xl shrink-0">
+            {offer.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={offer.imageUrl} alt={offer.product} className="h-full w-full object-cover" />
+            ) : (
+              categoryIcon
+            )}
           </div>
           <div className="flex-1">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{offer.brand}</p>
@@ -338,36 +341,77 @@ export default function OfferDetailPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center gap-4">
+        <button
+          onClick={() => setActiveAxis(activeAxis ? null : "all")}
+          className="flex w-full items-center gap-4 text-left"
+        >
           <ScoreCircle score={getOfferDisplayScore(offer)} size="lg" />
           <div className="flex-1">
-            <p className="font-bold">Score MAREF</p>
+            <p className="font-bold">Score MAREF et lecture PEFAS</p>
             <StatusBadge score={getOfferDisplayScore(offer)} />
-            <div className="flex gap-2 mt-2">
-              <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                 Confiance : {offer.confidence}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">
+              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
                 {offer.freshness}
               </span>
+              {bestAxis && (
+                <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
+                  Meilleur axe : {PEFAS_INFO[bestAxis[0]]?.name ?? bestAxis[0]}
+                </span>
+              )}
+              {worstAxis && (
+                <span className="rounded-lg bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  Axe à surveiller : {PEFAS_INFO[worstAxis[0]]?.name ?? worstAxis[0]}
+                </span>
+              )}
             </div>
+            <p className="mt-3 text-xs font-semibold text-blue-700">
+              {activeAxis ? "Masquer le détail des axes PEFAS" : "Afficher le détail des axes PEFAS"}
+            </p>
           </div>
-        </div>
+        </button>
 
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <div className="bg-blue-50 rounded-lg p-2.5">
-            <p className="text-[0.65rem] text-blue-600 font-medium">Meilleur axe</p>
-            <p className="text-sm font-bold text-blue-800">
-              {bestAxis ? `${PEFAS_INFO[bestAxis[0]]?.name ?? bestAxis[0]} (${bestAxis[1]})` : "Axe indisponible"}
-            </p>
+        {activeAxis && (
+          <div className="mt-4 border-t border-gray-100 pt-4">
+            {Object.entries(PEFAS_INFO).map(([key, info]) => {
+              const axisValue = safePefas[key as keyof typeof safePefas];
+              const numericValue = typeof axisValue === "number" ? axisValue : 0;
+
+              return (
+                <div key={key}>
+                  <AxisBar
+                    label={info.name}
+                    value={numericValue}
+                    onClick={() => setActiveAxis(activeAxis === key ? "all" : key)}
+                  />
+
+                  {activeAxis === key && (
+                    <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                      <p className="mb-2 text-xs text-gray-600">{info.desc}</p>
+                      <MimoCard
+                        compact
+                        text={
+                          "Sur l’axe " +
+                          info.name +
+                          " (" +
+                          numericValue +
+                          "/100), " +
+                          (numericValue >= 75
+                            ? "c’est un point fort de cette offre."
+                            : numericValue >= 55
+                              ? "le niveau est correct mais encore discutable."
+                              : "la vigilance est nécessaire avant décision.")
+                        }
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div className="bg-yellow-50 rounded-lg p-2.5">
-            <p className="text-[0.65rem] text-yellow-600 font-medium">Axe a surveiller</p>
-            <p className="text-sm font-bold text-yellow-800">
-              {worstAxis ? `${PEFAS_INFO[worstAxis[0]]?.name ?? worstAxis[0]} (${worstAxis[1]})` : "Axe indisponible"}
-            </p>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
@@ -452,44 +496,6 @@ export default function OfferDetailPage() {
       </div>
 
       <MimoCard text={mimoText} />
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <h3 className="font-bold text-sm mb-3">Analyse PEFAS</h3>
-        {Object.entries(PEFAS_INFO).map(([key, info]) => {
-          const axisValue = safePefas[key as keyof typeof safePefas];
-
-          return (
-            <div key={key}>
-              <AxisBar
-                label={info.name}
-                value={typeof axisValue === "number" ? axisValue : 0}
-                onClick={() => setActiveAxis(activeAxis === key ? null : key)}
-              />
-
-              {activeAxis === key && (
-                <div className="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  <p className="text-xs text-gray-600 mb-2">{info.desc}</p>
-                  <MimoCard
-                    compact
-                    text={
-                      "Sur l axe " +
-                      info.name +
-                      " (" +
-                      (typeof axisValue === "number" ? axisValue : 0) +
-                      "/100) : " +
-                      ((typeof axisValue === "number" ? axisValue : 0) >= 75
-                        ? "c est un point fort de cette offre."
-                        : (typeof axisValue === "number" ? axisValue : 0) >= 55
-                          ? "resultat correct mais pas exceptionnel."
-                          : "c est un point faible a verifier.")
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-100">
@@ -681,10 +687,50 @@ export default function OfferDetailPage() {
         )}
       </div>
 
-      <NoDataBlock
-        title="Historique de prix indisponible"
-        description="MAREF ne genere plus de courbe de prix simulee. Tant qu une source historique reelle n est pas disponible, cette section reste volontairement vide."
-      />
+      {offer.priceHistory && offer.priceHistory.length > 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-bold text-sm">Historique de prix</h3>
+              <p className="text-xs text-gray-500 mt-1">Données réellement enregistrées pour cette offre.</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {offer.priceHistory
+              .slice()
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((entry) => (
+                <div key={entry.date + entry.price} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {entry.price.toLocaleString("fr-FR")} EUR
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(entry.date).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                  {entry.sourceUrl ? (
+                    <a
+                      href={entry.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50"
+                    >
+                      Source
+                    </a>
+                  ) : (
+                    <span className="text-xs text-gray-400">Source non liée</span>
+                  )}
+                </div>
+              ))}
+          </div>
+        </div>
+      ) : (
+        <NoDataBlock
+          title="Historique de prix indisponible"
+          description="MAREF n’affiche plus de courbe simulée. Tant qu’aucun relevé réel n’est rattaché à cette offre, cette section reste vide."
+        />
+      )}
 
       {alternatives.length > 0 && (
         <div>

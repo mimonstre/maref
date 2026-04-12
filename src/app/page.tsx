@@ -53,9 +53,6 @@ export default function HomePage() {
   if (!authLoading && !user) {
     return (
       <LandingPage
-        offerCount={offers.length}
-        merchantCount={[...new Set(offers.map((offer) => offer.merchant))].length}
-        brandCount={[...new Set(offers.map((offer) => offer.brand))].length}
         categoryCards={categoryCards}
       />
     );

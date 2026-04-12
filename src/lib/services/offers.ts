@@ -19,9 +19,11 @@ type OfferRow = {
   status_color: string;
   confidence: string;
   freshness: string;
+  image_url?: string | null;
   source_url?: string | null;
   last_updated?: string | null;
   reliability_score?: number | null;
+  price_history?: Array<{ date: string; price: number; source_url?: string | null }> | null;
   pefas_p: number;
   pefas_e: number;
   pefas_f: number;
@@ -65,9 +67,11 @@ function mapOffer(row: OfferRow): Offer {
     statusColor: row.status_color || null,
     confidence: row.confidence || null,
     freshness: row.freshness || null,
+    imageUrl: row.image_url || null,
     sourceUrl: row.source_url || null,
     lastUpdated: row.last_updated || null,
     reliabilityScore: typeof row.reliability_score === "number" ? row.reliability_score : null,
+    priceHistory: Array.isArray(row.price_history) ? row.price_history : [],
     dataState: "unknown",
     pefas: {
       P: typeof row.pefas_p === "number" ? row.pefas_p : null,

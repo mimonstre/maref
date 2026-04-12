@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { ArrowRight, BarChart3, Bot, FolderKanban, Scale, ShieldCheck, Sparkles } from "lucide-react";
-import { MimoCard, NoDataBlock, ScoreCircle } from "@/components/shared/Score";
+import { MimoCard, NoDataBlock } from "@/components/shared/Score";
 
 type LandingPageProps = {
-  offerCount: number;
-  merchantCount: number;
-  brandCount: number;
   categoryCards: Array<{ name: string; count: number; icon: React.ReactNode }>;
 };
 
@@ -34,7 +31,7 @@ const featureCards = [
   },
 ];
 
-export default function LandingPage({ offerCount, merchantCount, brandCount, categoryCards }: LandingPageProps) {
+export default function LandingPage({ categoryCards }: LandingPageProps) {
   return (
     <div className="space-y-6">
       <section className="premium-hero rounded-[32px] px-6 py-8 text-white md:px-10 md:py-12">
@@ -73,25 +70,20 @@ export default function LandingPage({ offerCount, merchantCount, brandCount, cat
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Signal principal</p>
-                  <h2 className="mt-2 text-xl font-extrabold text-slate-950">Decider avec contexte</h2>
+                  <h2 className="mt-2 text-xl font-extrabold text-slate-950">Décider avec contexte</h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Projet, budget, axes PEFAS, comparaison par famille et niveau de fiabilite visible dans chaque ecran.
+                    Projet, budget, axes PEFAS, comparaison par famille et niveau de fiabilité visible dans chaque écran.
                   </p>
                 </div>
-                <ScoreCircle score={87} size="xl" />
               </div>
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                <div className="rounded-2xl bg-blue-50 p-3 text-center">
-                  <p className="text-lg font-black text-blue-800">{offerCount}</p>
-                  <p className="text-[0.68rem] font-medium text-blue-700/80">Offres</p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-2xl bg-blue-50 p-3">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-blue-700/80">Ce qui compte</p>
+                  <p className="mt-2 text-sm text-slate-700">Des arbitrages clairs, des données traçables et un parcours décisionnel lisible.</p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 p-3 text-center">
-                  <p className="text-lg font-black text-slate-900">{merchantCount}</p>
-                  <p className="text-[0.68rem] font-medium text-slate-500">Marchands</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 p-3 text-center">
-                  <p className="text-lg font-black text-slate-900">{brandCount}</p>
-                  <p className="text-[0.68rem] font-medium text-slate-500">Marques</p>
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-500">Ce qui est retiré</p>
+                  <p className="mt-2 text-sm text-slate-700">Les compteurs décoratifs, les faux signaux de volume et les métriques qui n’aident pas à choisir.</p>
                 </div>
               </div>
             </div>
@@ -129,7 +121,7 @@ export default function LandingPage({ offerCount, merchantCount, brandCount, cat
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Ce que le produit fait vraiment</p>
-              <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Une experience plus proche d un cockpit que d un catalogue</h2>
+              <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Une expérience plus proche d’un cockpit que d’un catalogue</h2>
             </div>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -158,7 +150,7 @@ export default function LandingPage({ offerCount, merchantCount, brandCount, cat
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Catalogue actif</p>
-            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Families disponibles</h2>
+            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Familles disponibles</h2>
           </div>
           <Link href="/explorer" className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-100">
             Ouvrir l explorer
@@ -171,7 +163,7 @@ export default function LandingPage({ offerCount, merchantCount, brandCount, cat
                 {category.icon}
               </div>
               <p className="mt-4 text-lg font-bold text-slate-950">{category.name}</p>
-              <p className="mt-1 text-sm text-slate-500">{category.count} offre{category.count > 1 ? "s" : ""} disponibles</p>
+              <p className="mt-1 text-sm text-slate-500">Entrer dans cette famille pour explorer les sous-catégories pertinentes.</p>
             </Link>
           ))}
         </div>

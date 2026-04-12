@@ -30,8 +30,14 @@ export type Offer = {
   confidence: string | null;
   freshness: string | null;
   sourceUrl: string | null;
+  imageUrl?: string | null;
   lastUpdated: string | null;
   reliabilityScore: number | null;
+  priceHistory?: Array<{
+    date: string;
+    price: number;
+    sourceUrl?: string | null;
+  }>;
   dataState: DataTruthState;
   pefas: {
     P: number | null;

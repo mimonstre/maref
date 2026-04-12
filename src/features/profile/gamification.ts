@@ -24,6 +24,11 @@ export type ProfileBadge = {
   completed: boolean;
 };
 
+export type SeasonalBadge = ProfileBadge & {
+  periodLabel: string;
+  activeNow: boolean;
+};
+
 const PROFILE_LEVELS = [
   { level: 1, name: "Niveau 1", xpNeeded: 0 },
   { level: 2, name: "Niveau 2", xpNeeded: 40 },
@@ -71,6 +76,23 @@ const PROFILE_BADGE_RULES: Array<Omit<ProfileBadge, "completed"> & { isCompleted
   },
 ];
 
+const SEASONAL_BADGES: Array<{
+  id: string;
+  name: string;
+  description: string;
+  periodLabel: string;
+  months: number[];
+}> = [
+  { id: "season-winter-sales", name: "Soldes d’hiver", description: "Badge disponible pendant la période des soldes d’hiver.", periodLabel: "Janvier - février", months: [0, 1] },
+  { id: "season-valentine", name: "Saint-Valentin", description: "Badge saisonnier autour de la période de la Saint-Valentin.", periodLabel: "Février", months: [1] },
+  { id: "season-easter", name: "Pâques", description: "Badge saisonnier associé aux sélections de printemps.", periodLabel: "Mars - avril", months: [2, 3] },
+  { id: "season-summer-sales", name: "Soldes d’été", description: "Badge disponible pendant la période des soldes d’été.", periodLabel: "Juin - juillet", months: [5, 6] },
+  { id: "season-french-days", name: "French Days", description: "Badge lié aux périodes French Days quand elles sont actives.", periodLabel: "Avril / septembre", months: [3, 8] },
+  { id: "season-halloween", name: "Halloween", description: "Badge saisonnier d’automne.", periodLabel: "Octobre", months: [9] },
+  { id: "season-black-friday", name: "Black Friday", description: "Badge saisonnier pour les comparatifs menés pendant Black Friday.", periodLabel: "Novembre", months: [10] },
+  { id: "season-christmas", name: "Noël", description: "Badge saisonnier pour les parcours d’achat de fin d’année.", periodLabel: "Décembre", months: [11] },
+];
+
 function readCurrentValue(snapshot: ProfileActivitySnapshot, taskId: string) {
   if (taskId.startsWith("favorites")) return snapshot.favorites;
   if (taskId.startsWith("projects")) return snapshot.projects;
@@ -98,11 +120,21 @@ export function computeProfileProgress(snapshot: ProfileActivitySnapshot) {
     ? Math.max(0, Math.min(100, ((totalXp - currentLevel.xpNeeded) / (nextLevel.xpNeeded - currentLevel.xpNeeded)) * 100))
     : 100;
 
-  const badges = PROFILE_BADGE_RULES.map((badge) => ({
+  const activityBadges = PROFILE_BADGE_RULES.map((badge) => ({
     id: badge.id,
     name: badge.name,
     description: badge.description,
     completed: badge.isCompleted(snapshot),
+  }));
+
+  const currentMonth = new Date().getMonth();
+  const seasonalBadges: SeasonalBadge[] = SEASONAL_BADGES.map((badge) => ({
+    id: badge.id,
+    name: badge.name,
+    description: badge.description,
+    periodLabel: badge.periodLabel,
+    activeNow: badge.months.includes(currentMonth),
+    completed: false,
   }));
 
   return {
@@ -111,7 +143,9 @@ export function computeProfileProgress(snapshot: ProfileActivitySnapshot) {
     currentLevel,
     nextLevel,
     progressPercent,
-    badges,
+    badges: activityBadges,
+    activityBadges,
+    seasonalBadges,
   };
 }
 

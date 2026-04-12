@@ -6,18 +6,18 @@ export type ScoredOffer<T extends Offer = Offer> = T & {
 };
 
 export function getScoreColorClass(score: number) {
-  if (score >= 85) return "bg-blue-700";
-  if (score >= 72) return "bg-blue-600";
-  if (score >= 58) return "bg-sky-600";
+  if (score >= 85) return "bg-[#163a74]";
+  if (score >= 72) return "bg-[#1f4b8f]";
+  if (score >= 58) return "bg-[#2f68b1]";
   if (score >= 42) return "bg-yellow-500";
   if (score >= 25) return "bg-orange-500";
   return "bg-red-600";
 }
 
 export function getScoreStatus(score: number) {
-  if (score >= 85) return { label: "Excellent choix", className: "bg-blue-100 text-blue-800", color: "#1d4ed8" };
-  if (score >= 72) return { label: "Tres bon choix", className: "bg-blue-50 text-blue-700", color: "#2563eb" };
-  if (score >= 58) return { label: "Bon choix", className: "bg-sky-100 text-sky-700", color: "#0284c7" };
+  if (score >= 85) return { label: "Excellent choix", className: "bg-blue-100 text-[#163a74]", color: "#163a74" };
+  if (score >= 72) return { label: "Très bon choix", className: "bg-blue-50 text-[#1f4b8f]", color: "#1f4b8f" };
+  if (score >= 58) return { label: "Bon choix", className: "bg-slate-100 text-[#2f68b1]", color: "#2f68b1" };
   if (score >= 42) return { label: "A surveiller", className: "bg-yellow-100 text-yellow-700", color: "#e6a817" };
   if (score >= 25) return { label: "Risque", className: "bg-orange-100 text-orange-700", color: "#d4652a" };
   return { label: "Peu pertinent", className: "bg-red-100 text-red-700", color: "#c0392b" };

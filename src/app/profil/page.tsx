@@ -218,13 +218,13 @@ export default function ProfilPage() {
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-bold">Badges reels</h3>
+          <h3 className="font-bold">Badges d’activité</h3>
           <span className="text-xs text-gray-400">
-            {progress.badges.filter((badge) => badge.completed).length} / {progress.badges.length} obtenus
+            {progress.activityBadges.filter((badge) => badge.completed).length} / {progress.activityBadges.length} obtenus
           </span>
         </div>
         <div className="grid grid-cols-1 gap-2">
-          {progress.badges.map((badge) => (
+          {progress.activityBadges.map((badge) => (
             <div
               key={badge.id}
               className={
@@ -251,12 +251,48 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {progress.badges.every((badge) => !badge.completed) && (
+      {progress.activityBadges.every((badge) => !badge.completed) && (
         <NoDataBlock
-          title="Aucun badge pour le moment"
-          description="Les badges ne sont attribues qu apres une action reelle verifiee. Rien n est pre-rempli."
+          title="Aucun badge d’activité pour le moment"
+          description="Les badges ne sont attribués qu’après une action réelle vérifiée. Rien n’est pré-rempli."
         />
       )}
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-bold">Badges saison</h3>
+          <span className="text-xs text-gray-400">
+            {progress.seasonalBadges.filter((badge) => badge.activeNow).length} saison{progress.seasonalBadges.filter((badge) => badge.activeNow).length > 1 ? "s" : ""} active{progress.seasonalBadges.filter((badge) => badge.activeNow).length > 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          {progress.seasonalBadges.map((badge) => (
+            <div
+              key={badge.id}
+              className={
+                "rounded-xl border p-3 " +
+                (badge.activeNow ? "border-blue-200 bg-blue-50" : "border-gray-100 bg-gray-50")
+              }
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold">{badge.name}</p>
+                  <p className="mt-1 text-xs text-gray-500">{badge.description}</p>
+                  <p className="mt-1 text-[0.65rem] font-semibold text-gray-400">{badge.periodLabel}</p>
+                </div>
+                <span
+                  className={
+                    "rounded-full px-2 py-1 text-[0.65rem] font-bold " +
+                    (badge.activeNow ? "bg-blue-200 text-blue-800" : "bg-gray-200 text-gray-600")
+                  }
+                >
+                  {badge.activeNow ? "Saison active" : "À venir"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center">
@@ -274,7 +310,7 @@ export default function ProfilPage() {
       </div>
 
       <IncompleteDataWarning
-        description="Le profil n affiche plus de badges saisonniers, de niveaux fantaisie ou de progression inventee. Seules les actions detectees dans vos donnees sont prises en compte."
+        description="Les XP et badges d’activité restent basés sur des actions réelles. Les badges saison n’apparaissent que comme repères calendaires tant qu’un suivi événementiel vérifiable n’est pas branché."
       />
 
       <div className="relative rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm">

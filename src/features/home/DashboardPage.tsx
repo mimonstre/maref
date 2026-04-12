@@ -19,7 +19,7 @@ import { getCategoryIcon } from "@/lib/categories";
 import type { Offer } from "@/lib/core";
 import { deriveUserJourney } from "@/lib/core";
 import { analyzeProject } from "@/lib/projects/service";
-import { getOfferDisplayScore, rankOffersByScore } from "@/lib/score/engine";
+import { rankOffersByScore } from "@/lib/score/engine";
 
 type DashboardPageProps = {
   userName: string;
@@ -50,10 +50,6 @@ const quickLinks: QuickLink[] = [
 ];
 
 export default function DashboardPage({ userName, offers, projects, projectOffers, favCount, topicCount, loading }: DashboardPageProps) {
-  const scoredOffers = offers.filter((offer) => getOfferDisplayScore(offer) !== null);
-  const avgScore = scoredOffers.length > 0
-    ? Math.round(scoredOffers.reduce((sum, offer) => sum + (getOfferDisplayScore(offer) || 0), 0) / scoredOffers.length)
-    : 0;
   const topOffers = rankOffersByScore(offers).filter((offer) => offer.displayScore !== null).slice(0, 4);
   const cheapOffers = [...offers].sort((a, b) => a.price - b.price).slice(0, 3);
   const journey = deriveUserJourney(projects, projectOffers);
@@ -112,12 +108,12 @@ export default function DashboardPage({ userName, offers, projects, projectOffer
               <p className="mt-3 text-3xl font-black">{projects.length}</p>
             </div>
             <div className="rounded-[26px] bg-white/12 p-4 backdrop-blur-sm">
-              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Offres</p>
-              <p className="mt-3 text-3xl font-black">{offers.length}</p>
+              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Discussions</p>
+              <p className="mt-3 text-3xl font-black">{topicCount}</p>
             </div>
             <div className="rounded-[26px] bg-white/12 p-4 backdrop-blur-sm">
-              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Score moyen</p>
-              <p className="mt-3 text-3xl font-black">{avgScore || "-"}</p>
+              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Étape</p>
+              <p className="mt-3 text-3xl font-black">{journey.progress}/5</p>
             </div>
           </div>
         </div>
@@ -249,8 +245,8 @@ export default function DashboardPage({ userName, offers, projects, projectOffer
 
         <div className="space-y-4">
           <div className="premium-surface rounded-[30px] p-6">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Petits prix</p>
-            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Entrees de gamme visibles</h2>
+            <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Repères rapides</p>
+            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Points d’entrée utiles</h2>
             <div className="mt-4 grid grid-cols-3 gap-3">
               {cheapOffers.map((offer) => (
                 <Link key={offer.id} href={`/explorer/${offer.id}`} className="premium-card rounded-[22px] p-4 text-center transition-all hover:translate-y-[-2px]">
@@ -260,25 +256,6 @@ export default function DashboardPage({ userName, offers, projects, projectOffer
                   <p className="mt-3 text-sm font-black text-blue-700">{offer.price.toLocaleString("fr-FR")} EUR</p>
                 </Link>
               ))}
-            </div>
-          </div>
-
-          <div className="premium-surface rounded-[30px] p-6">
-            <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Etat du produit</p>
-            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Base active</h2>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              <div className="premium-card rounded-[22px] p-4 text-center">
-                <p className="text-2xl font-black text-blue-700">{topicCount}</p>
-                <p className="mt-1 text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">Discussions</p>
-              </div>
-              <div className="premium-card rounded-[22px] p-4 text-center">
-                <p className="text-2xl font-black text-blue-700">5</p>
-                <p className="mt-1 text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">Axes PEFAS</p>
-              </div>
-              <div className="premium-card rounded-[22px] p-4 text-center">
-                <p className="text-base font-black text-blue-700">Honnete</p>
-                <p className="mt-1 text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">Transparence</p>
-              </div>
             </div>
           </div>
         </div>

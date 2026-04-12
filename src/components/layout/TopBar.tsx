@@ -55,7 +55,7 @@ export default function TopBar() {
             M
           </div>
           <div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-blue-700/70">Decision SaaS</p>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-blue-700/70">Intelligence Décisionnelle</p>
             <p className="text-base font-extrabold tracking-tight text-slate-950">MAREF</p>
           </div>
         </Link>

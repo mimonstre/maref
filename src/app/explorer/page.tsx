@@ -130,8 +130,6 @@ export default function ExplorerPage() {
     } else {
       showMessage("Ajoutee a la comparaison " + result.family.label);
     }
-
-    router.push("/comparer");
   }
 
   function getCatCount(categoryId: string) {
@@ -245,12 +243,11 @@ export default function ExplorerPage() {
               <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-700">Catalogue</p>
               <h3 className="section-title mt-2 text-2xl font-black text-slate-950">Choisissez une famille de produits</h3>
             </div>
-            <div className="rounded-[22px] bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">{allOffers.length} offres actives</div>
+            <div className="rounded-[22px] bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">Vue par familles</div>
           </div>
 
           <div className="space-y-3">
             {CATEGORIES.map((category) => {
-              const count = getCatCount(category.id);
               const avg = getCatAvgScore(category.id);
 
               return (
@@ -261,7 +258,7 @@ export default function ExplorerPage() {
                       <h4 className="text-lg font-black text-slate-950">{category.name}</h4>
                       {avg > 0 && <ScoreCircle score={avg} size="xs" />}
                     </div>
-                    <p className="text-sm text-slate-500">{category.subs.length} sous-categories - {count} offres</p>
+                    <p className="text-sm text-slate-500">{category.subs.length} sous-catégories structurées pour une comparaison propre.</p>
                     <div className="flex gap-1.5 mt-2 flex-wrap">
                       {category.subs.map((subcategory) => (
                         <span key={subcategory.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] text-slate-500">
@@ -279,20 +276,7 @@ export default function ExplorerPage() {
           </div>
 
           {initialLoaded && (
-            <div className="grid grid-cols-3 gap-3 mt-5">
-              <div className="premium-card rounded-[24px] p-4 text-center">
-                <p className="text-lg font-bold text-blue-700">{allOffers.length}</p>
-                <p className="text-[0.65rem] text-gray-500">Offres totales</p>
-              </div>
-              <div className="premium-card rounded-[24px] p-4 text-center">
-                <p className="text-lg font-bold text-blue-700">{merchants.length}</p>
-                <p className="text-[0.65rem] text-gray-500">Marchands</p>
-              </div>
-              <div className="premium-card rounded-[24px] p-4 text-center">
-                <p className="text-lg font-bold text-blue-700">{brands.length}</p>
-                <p className="text-[0.65rem] text-gray-500">Marques</p>
-              </div>
-            </div>
+            <MimoCard text="Commencez par une famille, descendez jusqu’à la bonne sous-catégorie, puis ne gardez que les offres qui méritent vraiment d’être comparées." />
           )}
         </div>
       )}
