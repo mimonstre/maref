@@ -1,22 +1,34 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { NotificationItem } from "@/lib/core";
+import { EmptyState, LoadingSkeleton, MimoCard } from "@/components/shared/Score";
 import { getRelativeDateLabel, timeAgo } from "@/lib/format";
 import { getNotifications } from "@/lib/queries";
-import { EmptyState, LoadingSkeleton, MimoCard } from "@/components/shared/Score";
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
-      setNotifications(await getNotifications());
-      setLoading(false);
+      const nextNotifications = await getNotifications();
+      if (!cancelled) {
+        setNotifications(nextNotifications);
+        setLoading(false);
+      }
     }
-    load();
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const grouped: Record<string, NotificationItem[]> = {};
@@ -30,7 +42,9 @@ export default function NotificationsPage() {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold">Notifications</h2>
-        <p className="text-sm text-gray-500">{notifications.length} notification{notifications.length > 1 ? "s" : ""}</p>
+        <p className="text-sm text-gray-500">
+          {notifications.length} notification{notifications.length > 1 ? "s" : ""}
+        </p>
       </div>
 
       <MimoCard text="Cette page regroupe vos alertes et evenements importants. Les notifications non lues meritent votre attention en priorite." />
@@ -47,28 +61,46 @@ export default function NotificationsPage() {
         <div className="space-y-5">
           {Object.entries(grouped).map(([date, items]) => (
             <div key={date}>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{date}</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">{date}</h3>
               <div className="space-y-2">
                 {items.map((item) => (
                   <div
                     key={item.id}
                     onClick={() => item.offer_id && router.push("/explorer/" + item.offer_id)}
-                    className={"bg-white rounded-xl border p-3.5 transition-all " + (item.offer_id ? "cursor-pointer hover:shadow-md hover:border-blue-300" : "border-gray-200")}
+                    className={
+                      "rounded-xl border bg-white p-3.5 transition-all " +
+                      (item.offer_id ? "cursor-pointer hover:border-blue-300 hover:shadow-md" : "border-gray-200")
+                    }
                   >
                     <div className="flex gap-3">
-                      <div className={"w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0 " + (item.read ? "bg-gray-50" : "bg-blue-50")}>
-                        {item.type.includes("price") ? "💸" : item.type.includes("project") ? "📁" : item.type.includes("forum") ? "💬" : "🔔"}
+                      <div
+                        className={
+                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-xl " +
+                          (item.read ? "bg-gray-50" : "bg-blue-50")
+                        }
+                      >
+                        {item.type.includes("price")
+                          ? "💸"
+                          : item.type.includes("project")
+                            ? "📁"
+                            : item.type.includes("forum")
+                              ? "💬"
+                              : "🔔"}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-sm">{item.title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{item.message}</p>
+                            <p className="text-sm font-semibold">{item.title}</p>
+                            <p className="mt-0.5 text-xs text-gray-500">{item.message}</p>
                           </div>
-                          {!item.read && <span className="text-[0.6rem] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Nouveau</span>}
+                          {!item.read && (
+                            <span className="rounded-full bg-blue-100 px-2 py-1 text-[0.6rem] font-bold text-blue-700">
+                              Nouveau
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <span className="text-[0.65rem] text-gray-400 uppercase tracking-wide">{item.type}</span>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[0.65rem] uppercase tracking-wide text-gray-400">{item.type}</span>
                           <span className="text-[0.65rem] text-gray-400">{timeAgo(item.created_at)}</span>
                         </div>
                       </div>

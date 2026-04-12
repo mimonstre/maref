@@ -124,11 +124,11 @@ export default function ProfilPage() {
   async function handleSavePreferences() {
     const ok = await upsertUserProfile({ budget, priority, horizon, usage, risk });
     if (!ok) {
-      saveMessage.show("Impossible d enregistrer vos preferences pour le moment.");
+      saveMessage.showMessage("Impossible d enregistrer vos preferences pour le moment.");
       return;
     }
 
-    saveMessage.show("Preferences enregistrees.");
+    saveMessage.showMessage("Preferences enregistrees.");
     setEditing(false);
   }
 

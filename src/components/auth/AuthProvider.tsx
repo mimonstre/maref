@@ -5,6 +5,7 @@ import { getUser, onAuthChange } from "@/lib/auth";
 type User = {
   id: string;
   email?: string;
+  created_at?: string;
   user_metadata?: { name?: string };
 } | null;
 
