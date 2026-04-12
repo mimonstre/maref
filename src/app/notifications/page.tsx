@@ -2,12 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRelativeDateLabel, timeAgo } from "@/lib/format";
-import { getNotifications, type NotificationItem } from "@/lib/queries";
+import { getNotifications } from "@/lib/queries";
 import { EmptyState, LoadingSkeleton, MimoCard } from "@/components/shared/Score";
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
