@@ -1,10 +1,11 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { EmptyState, LoadingSkeleton, MimoCard, ScoreCircle, StatusBadge } from "@/components/shared/Score";
 import { getCategoryIcon } from "@/lib/categories";
 import { getRelativeDateLabel, timeAgo } from "@/lib/format";
 import { clearViewHistory, getViewHistory } from "@/lib/queries";
-import { ScoreCircle, StatusBadge, MimoCard, EmptyState, LoadingSkeleton } from "@/components/shared/Score";
 
 type HistoryItem = Awaited<ReturnType<typeof getViewHistory>>[number];
 
@@ -19,7 +20,8 @@ export default function HistoriquePage() {
       setHistory(await getViewHistory());
       setLoading(false);
     }
-    load();
+
+    void Promise.resolve().then(load);
   }, []);
 
   async function handleClearHistory() {
@@ -48,15 +50,15 @@ export default function HistoriquePage() {
         )}
       </div>
 
-      <MimoCard text="Votre historique vous permet de retrouver les offres consultees recemment. Reprenez votre analyse la ou vous l avez laissee." />
+      <MimoCard text="Votre historique ne remonte que les consultations reellement enregistrees. Si aucune offre n a ete ouverte, cette page reste vide." />
 
       {loading ? (
         <LoadingSkeleton count={4} />
       ) : history.length === 0 ? (
         <EmptyState
-          icon="🕐"
+          icon="?"
           title="Aucun historique"
-          description="Les offres que vous consultez apparaitront ici."
+          description="Cette page n affiche que les consultations reellement enregistrees."
           action={() => router.push("/explorer")}
           actionLabel="Explorer les offres"
         />
@@ -70,16 +72,16 @@ export default function HistoriquePage() {
                   <div
                     key={item.id}
                     onClick={() => router.push("/explorer/" + item.offer_id)}
-                    className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group"
+                    className="bg-white rounded-xl border border-gray-200 p-3.5 flex gap-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
                   >
-                    <div className="w-14 h-14 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-emerald-50 transition-colors">
+                    <div className="w-14 h-14 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-50 transition-colors">
                       {getCategoryIcon(item.category)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div>
                           <p className="text-[0.7rem] text-gray-400 font-medium uppercase tracking-wide">{item.brand}</p>
-                          <p className="font-semibold text-sm truncate group-hover:text-emerald-700 transition-colors">{item.product}</p>
+                          <p className="font-semibold text-sm truncate group-hover:text-blue-700 transition-colors">{item.product}</p>
                         </div>
                         <ScoreCircle score={item.score} size="sm" />
                       </div>

@@ -53,10 +53,10 @@ export default function NotificationsPage() {
                   <div
                     key={item.id}
                     onClick={() => item.offer_id && router.push("/explorer/" + item.offer_id)}
-                    className={"bg-white rounded-xl border p-3.5 transition-all " + (item.offer_id ? "cursor-pointer hover:shadow-md hover:border-emerald-300" : "border-gray-200")}
+                    className={"bg-white rounded-xl border p-3.5 transition-all " + (item.offer_id ? "cursor-pointer hover:shadow-md hover:border-blue-300" : "border-gray-200")}
                   >
                     <div className="flex gap-3">
-                      <div className={"w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0 " + (item.read ? "bg-gray-50" : "bg-emerald-50")}>
+                      <div className={"w-12 h-12 rounded-lg flex items-center justify-center text-xl shrink-0 " + (item.read ? "bg-gray-50" : "bg-blue-50")}>
                         {item.type.includes("price") ? "💸" : item.type.includes("project") ? "📁" : item.type.includes("forum") ? "💬" : "🔔"}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -65,7 +65,7 @@ export default function NotificationsPage() {
                             <p className="font-semibold text-sm">{item.title}</p>
                             <p className="text-xs text-gray-500 mt-0.5">{item.message}</p>
                           </div>
-                          {!item.read && <span className="text-[0.6rem] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">Nouveau</span>}
+                          {!item.read && <span className="text-[0.6rem] font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Nouveau</span>}
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-[0.65rem] text-gray-400 uppercase tracking-wide">{item.type}</span>

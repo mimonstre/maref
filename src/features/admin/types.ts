@@ -16,6 +16,9 @@ export type AdminOffer = {
   status_color: string;
   confidence: string;
   freshness: string;
+  source_url: string | null;
+  last_updated: string | null;
+  reliability_score: number | null;
   pefas_p: number;
   pefas_e: number;
   pefas_f: number;
@@ -38,6 +41,9 @@ export type AdminOfferForm = {
   availability: string;
   delivery: string;
   warranty: string;
+  sourceUrl: string;
+  lastUpdated: string;
+  reliabilityScore: string;
   pefas_p: string;
   pefas_e: string;
   pefas_f: string;

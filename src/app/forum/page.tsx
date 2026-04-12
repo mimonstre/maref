@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { EmptyState } from "@/components/shared/Score";
 import {
   createForumReply,
   createForumTopic,
@@ -11,14 +12,22 @@ import {
 } from "@/features/forum/api";
 import type { ForumReply, ForumTopic } from "@/features/forum/types";
 import { getForumAvatarColor } from "@/features/forum/utils";
+import { CATEGORIES } from "@/lib/categories";
 import { timeAgo } from "@/lib/format";
 
 const FORUM_TABS = [
   { id: "recent", label: "Recent" },
-  { id: "electromenager", label: "Electromenager" },
+  { id: "electromenager", label: "Gros electromenager" },
   { id: "froid", label: "Froid" },
   { id: "televiseurs", label: "TV" },
+  { id: "telephonie", label: "Telephonie" },
+  { id: "informatique", label: "Informatique" },
+  { id: "jeux-video", label: "Jeux video" },
 ];
+
+function getForumCategoryLabel(value: string) {
+  return CATEGORIES.find((category) => category.id === value)?.name || value;
+}
 
 export default function ForumPage() {
   const { user } = useAuth();
@@ -30,7 +39,7 @@ export default function ForumPage() {
   const [showNewTopic, setShowNewTopic] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
-  const [newCategory, setNewCategory] = useState("General");
+  const [newCategory, setNewCategory] = useState("general");
   const [replyText, setReplyText] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -111,18 +120,23 @@ export default function ForumPage() {
     }
   }
 
-  const filteredTopics = activeTab === "recent" ? topics : topics.filter((topic) => topic.category.toLowerCase().includes(activeTab));
+  const filteredTopics = activeTab === "recent"
+    ? topics
+    : topics.filter((topic) => {
+        const topicCategory = topic.category.toLowerCase();
+        return topicCategory === activeTab || getForumCategoryLabel(topic.category).toLowerCase().includes(activeTab);
+      });
 
   if (activeTopic) {
     return (
       <div className="space-y-4">
         {message && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+          <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
             {message}
           </div>
         )}
 
-        <button onClick={() => { setActiveTopic(null); setReplies([]); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 transition-colors">
+        <button onClick={() => { setActiveTopic(null); setReplies([]); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
           Retour au forum
         </button>
@@ -140,7 +154,7 @@ export default function ForumPage() {
           <h2 className="text-lg font-bold mb-2">{activeTopic.title}</h2>
           <p className="text-sm text-gray-600 leading-relaxed">{activeTopic.content}</p>
           <div className="flex gap-2 mt-3">
-            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">{activeTopic.category}</span>
+            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">{getForumCategoryLabel(activeTopic.category)}</span>
             <span className="text-xs text-gray-400">{replies.length} reponse{replies.length > 1 ? "s" : ""}</span>
           </div>
         </div>
@@ -149,7 +163,7 @@ export default function ForumPage() {
           <h3 className="font-bold text-sm mb-3">Reponses ({replies.length})</h3>
           {replies.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-              <p className="text-sm text-gray-400">Aucune reponse. Soyez le premier !</p>
+              <p className="text-sm text-gray-400">Aucune reponse. Soyez le premier.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -163,8 +177,8 @@ export default function ForumPage() {
                     <span className="text-[0.65rem] text-gray-400">{timeAgo(reply.created_at)}</span>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed">{reply.content}</p>
-                  <button onClick={() => handleVote(reply.id)} className="mt-2 text-xs text-emerald-600 font-medium hover:text-emerald-800 transition-colors">
-                    â–² {reply.votes}
+                  <button onClick={() => handleVote(reply.id)} className="mt-2 text-xs text-blue-600 font-medium hover:text-blue-800 transition-colors">
+                    +1 ({reply.votes})
                   </button>
                 </div>
               ))}
@@ -175,7 +189,7 @@ export default function ForumPage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
           <h4 className="font-bold text-sm mb-2">Repondre</h4>
           <textarea
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none"
             rows={3}
             placeholder="Votre reponse..."
             value={replyText}
@@ -184,7 +198,7 @@ export default function ForumPage() {
           <button
             onClick={handleReply}
             disabled={saving || !replyText.trim()}
-            className="mt-2 bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors disabled:opacity-50 text-sm shadow-sm"
+            className="mt-2 bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 text-sm shadow-sm"
           >
             {saving ? "Publication..." : "Publier"}
           </button>
@@ -196,7 +210,7 @@ export default function ForumPage() {
   return (
     <div className="space-y-4">
       {message && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
           {message}
         </div>
       )}
@@ -208,7 +222,7 @@ export default function ForumPage() {
         </div>
         <button
           onClick={() => setShowNewTopic(!showNewTopic)}
-          className="text-sm font-semibold bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800 transition-colors shadow-sm"
+          className="text-sm font-semibold bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors shadow-sm"
         >
           {showNewTopic ? "Annuler" : "+ Nouveau topic"}
         </button>
@@ -218,22 +232,22 @@ export default function ForumPage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3 shadow-sm animate-fade-in-up">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Titre *</label>
-            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" placeholder="Ex: Quel lave-linge choisir pour un studio ?" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} />
+            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" placeholder="Ex: Quel lave-linge choisir pour un studio ?" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Categorie</label>
-            <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={newCategory} onChange={(event) => setNewCategory(event.target.value)}>
-              <option>General</option>
-              <option>Electromenager</option>
-              <option>Froid</option>
-              <option>Televiseurs</option>
+            <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={newCategory} onChange={(event) => setNewCategory(event.target.value)}>
+              <option value="general">General</option>
+              {CATEGORIES.map((category) => (
+                <option key={category.id} value={category.id}>{category.name}</option>
+              ))}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Contenu *</label>
-            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 resize-none" rows={4} placeholder="Decrivez votre question ou partagez votre experience..." value={newContent} onChange={(event) => setNewContent(event.target.value)}></textarea>
+            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none" rows={4} placeholder="Decrivez votre question ou partagez votre experience..." value={newContent} onChange={(event) => setNewContent(event.target.value)}></textarea>
           </div>
-          <button onClick={handleNewTopic} disabled={saving || !newTitle.trim() || !newContent.trim()} className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-xl hover:bg-emerald-800 transition-colors disabled:opacity-50 text-sm shadow-md">
+          <button onClick={handleNewTopic} disabled={saving || !newTitle.trim() || !newContent.trim()} className="w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 text-sm shadow-md">
             {saving ? "Publication..." : "Publier le topic"}
           </button>
         </div>
@@ -244,7 +258,7 @@ export default function ForumPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={"px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-[2px] transition-colors " + (activeTab === tab.id ? "text-emerald-700 border-emerald-700" : "text-gray-400 border-transparent hover:text-gray-600")}
+            className={"px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-[2px] transition-colors " + (activeTab === tab.id ? "text-blue-700 border-blue-700" : "text-gray-400 border-transparent hover:text-gray-600")}
           >
             {tab.label}
           </button>
@@ -261,11 +275,13 @@ export default function ForumPage() {
           ))}
         </div>
       ) : filteredTopics.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-3xl mb-3">ðŸ’¬</p>
-          <h3 className="font-bold text-gray-600 mb-1">Aucun topic</h3>
-          <p className="text-sm text-gray-400">Soyez le premier a lancer une discussion !</p>
-        </div>
+        <EmptyState
+          icon="?"
+          title="Il n y a encore aucune discussion"
+          description="Le forum reste vide tant qu aucun utilisateur n a publie de contenu reel."
+          action={() => setShowNewTopic(true)}
+          actionLabel="Creer le premier topic"
+        />
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
           {filteredTopics.map((topic) => (
@@ -285,17 +301,17 @@ export default function ForumPage() {
               <p className="text-xs text-gray-500 line-clamp-2">{topic.content}</p>
               <div className="flex gap-3 mt-2">
                 <span className="text-[0.7rem] text-gray-400">{topic.reply_count} reponse{topic.reply_count > 1 ? "s" : ""}</span>
-                <span className="text-[0.65rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">{topic.category}</span>
+                <span className="text-[0.65rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">{getForumCategoryLabel(topic.category)}</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="relative bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 bg-emerald-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
+      <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
+        <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
         <p className="text-sm text-gray-800 mt-2">
-          Le forum vous permet d echanger avec d autres decideurs. Partagez vos retours d experience et beneficiez des conseils de la communaute.
+          Le forum reste volontairement vide tant que la communaute ne publie pas de contenu reel. Aucun topic n est pre-rempli.
         </p>
       </div>
     </div>

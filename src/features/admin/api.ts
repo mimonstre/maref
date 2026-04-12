@@ -13,8 +13,9 @@ export async function saveAdminOffer(form: AdminOfferForm, editId?: string | nul
   const f = parseInt(form.pefas_f) || 70;
   const a = parseInt(form.pefas_a) || 70;
   const s = parseInt(form.pefas_s) || 70;
-  const score = computeScore(p, e, f, a, s);
+  const score = computeScore(p, e, f, a, s) ?? 0;
   const status = getScoreStatus(score);
+  const reliabilityScore = form.reliabilityScore ? parseInt(form.reliabilityScore) : null;
 
   const row = {
     product: form.product,
@@ -28,11 +29,14 @@ export async function saveAdminOffer(form: AdminOfferForm, editId?: string | nul
     availability: form.availability,
     delivery: form.delivery,
     warranty: form.warranty,
+    source_url: form.sourceUrl || null,
+    last_updated: form.lastUpdated || null,
+    reliability_score: reliabilityScore,
     score,
     status: status.label,
     status_color: status.color,
-    confidence: score >= 70 ? "Elevee" : score >= 50 ? "Bonne" : "Moyenne",
-    freshness: "Tres recente",
+    confidence: reliabilityScore !== null ? (reliabilityScore >= 80 ? "Elevee" : reliabilityScore >= 60 ? "Partielle" : "Faible") : "Inconnue",
+    freshness: form.lastUpdated ? "Verifiee" : "Date inconnue",
     pefas_p: p,
     pefas_e: e,
     pefas_f: f,

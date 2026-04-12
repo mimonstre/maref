@@ -1,5 +1,6 @@
 import { generateMimoAnalysis } from "@/features/offers/analysis";
-import type { Offer, ProjectDecisionContext } from "@/lib/core";
+import { hasEnoughDataForScore, type Offer, type ProjectDecisionContext } from "@/lib/core";
+import { getTruthWarning } from "@/lib/mimo/truthGuard";
 import { computeProjectAwareScore, getScoreStatus } from "@/lib/score/engine";
 
 export function generateMimo(input: {
@@ -8,6 +9,8 @@ export function generateMimo(input: {
   project?: ProjectDecisionContext;
   mode?: "offer" | "comparison" | "project" | "explorer" | "dashboard";
 }) {
+  const truthWarning = getTruthWarning(input);
+
   function getBudgetSignal() {
     const budgetRaw = input.project?.projectBudget;
     if (!budgetRaw || !input.offer) return null;
@@ -28,12 +31,13 @@ export function generateMimo(input: {
   }
 
   if (input.mode === "dashboard" && input.project?.existingOffers && input.project.existingOffers.length > 0) {
-    const ranked = [...input.project.existingOffers].sort(
-      (a, b) => computeProjectAwareScore(b, input.project) - computeProjectAwareScore(a, input.project),
-    );
+    const ranked = [...input.project.existingOffers].sort((a, b) => (computeProjectAwareScore(b, input.project) || -1) - (computeProjectAwareScore(a, input.project) || -1));
     const best = ranked[0];
+    if (!best || !hasEnoughDataForScore(best)) {
+      return "Je n ai pas assez de donnees fiables pour resumer votre projet principal.";
+    }
     const budgetMessage = input.project.projectBudget ? " Budget cible: " + input.project.projectBudget + "." : "";
-    return (
+    return ((truthWarning ? truthWarning + " " : "") +
       "Votre projet " +
       (input.project.projectName || "principal") +
       " est actuellement mene par " +
@@ -42,15 +46,18 @@ export function generateMimo(input: {
       best.product +
       ". " +
       "C est aujourd hui l option la plus coherente avec votre contexte de decision." +
-      budgetMessage
-    );
+      budgetMessage);
   }
 
   if (input.mode === "explorer" && input.comparison && input.comparison.length > 0) {
-    const ranked = [...input.comparison].sort((a, b) => b.score - a.score);
+    const ranked = [...input.comparison].sort((a, b) => (computeProjectAwareScore(b, input.project) || -1) - (computeProjectAwareScore(a, input.project) || -1));
     const best = ranked[0];
     const affordable = [...input.comparison].sort((a, b) => a.price - b.price)[0];
+    if (!best || !affordable) {
+      return "Je n ai pas encore assez de donnees pour orienter cette exploration.";
+    }
     return (
+      (truthWarning ? truthWarning + " " : "") +
       "Dans cette selection, " +
       best.brand +
       " " +
@@ -65,14 +72,16 @@ export function generateMimo(input: {
   }
 
   if (input.mode === "comparison" && input.comparison && input.comparison.length > 1) {
-    const ranked = [...input.comparison].sort(
-      (a, b) => computeProjectAwareScore(b, input.project) - computeProjectAwareScore(a, input.project),
-    );
+    const ranked = [...input.comparison].sort((a, b) => (computeProjectAwareScore(b, input.project) || -1) - (computeProjectAwareScore(a, input.project) || -1));
     const best = ranked[0];
     const runnerUp = ranked[1];
     const bestScore = computeProjectAwareScore(best, input.project);
     const runnerUpScore = runnerUp ? computeProjectAwareScore(runnerUp, input.project) : null;
+    if (bestScore === null) {
+      return truthWarning || "Je n ai pas assez de donnees pour comparer ces offres de maniere fiable.";
+    }
     return (
+      (truthWarning ? truthWarning + " " : "") +
       "Dans ce comparatif, " +
       best.brand +
       " " +
@@ -88,11 +97,13 @@ export function generateMimo(input: {
   }
 
   if (input.mode === "project" && input.project?.existingOffers && input.project.existingOffers.length > 0) {
-    const ranked = [...input.project.existingOffers].sort(
-      (a, b) => computeProjectAwareScore(b, input.project) - computeProjectAwareScore(a, input.project),
-    );
+    const ranked = [...input.project.existingOffers].sort((a, b) => (computeProjectAwareScore(b, input.project) || -1) - (computeProjectAwareScore(a, input.project) || -1));
     const best = ranked[0];
+    if (!best || !hasEnoughDataForScore(best)) {
+      return truthWarning || "Le projet contient encore trop peu de donnees fiables pour une recommandation.";
+    }
     return (
+      (truthWarning ? truthWarning + " " : "") +
       "Pour le projet " +
       (input.project.projectName || "en cours") +
       ", l offre la plus pertinente a ce stade est " +
@@ -104,11 +115,18 @@ export function generateMimo(input: {
   }
 
   if (input.offer) {
+    if (!hasEnoughDataForScore(input.offer)) {
+      return truthWarning || "Je n ai pas assez de donnees pour analyser cette offre de facon fiable.";
+    }
     const contextualScore = computeProjectAwareScore(input.offer, input.project);
+    if (contextualScore === null) {
+      return truthWarning || "Score indisponible : donnees insuffisantes pour une recommandation contextualisee.";
+    }
     const status = getScoreStatus(contextualScore);
     const { bestAxis, weakAxis } = getTopSignals(input.offer);
     const budgetSignal = getBudgetSignal();
     return (
+      (truthWarning ? truthWarning + " " : "") +
       generateMimoAnalysis(input.offer) +
       " Son meilleur levier est l axe " +
       bestAxis[0] +
@@ -124,5 +142,5 @@ export function generateMimo(input: {
     );
   }
 
-  return "Je peux vous aider a decider a partir d une offre, d un projet ou d un comparatif.";
+  return "Je peux vous aider a decider a partir d une offre, d un projet ou d un comparatif, a condition d avoir des donnees suffisantes.";
 }

@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { ProjectDecisionContext } from "@/lib/core";
+import { getOfferDataState, type ProjectDecisionContext } from "@/lib/core";
 import type { Offer } from "@/lib/data";
 
 export type Project = {
@@ -37,6 +37,9 @@ type OfferRow = {
   status_color: string;
   confidence: string;
   freshness: string;
+  source_url?: string | null;
+  last_updated?: string | null;
+  reliability_score?: number | null;
   pefas_p: number;
   pefas_e: number;
   pefas_f: number;
@@ -49,7 +52,7 @@ type OfferRow = {
 };
 
 function mapOffer(row: OfferRow): Offer {
-  return {
+  const offer: Offer = {
     id: row.id,
     product: row.product,
     brand: row.brand,
@@ -62,22 +65,31 @@ function mapOffer(row: OfferRow): Offer {
     availability: row.availability,
     delivery: row.delivery,
     warranty: row.warranty,
-    score: row.score,
-    status: row.status,
-    statusColor: row.status_color,
-    confidence: row.confidence,
-    freshness: row.freshness,
+    score: typeof row.score === "number" ? row.score : null,
+    status: row.status || null,
+    statusColor: row.status_color || null,
+    confidence: row.confidence || null,
+    freshness: row.freshness || null,
+    sourceUrl: row.source_url || null,
+    lastUpdated: row.last_updated || null,
+    reliabilityScore: typeof row.reliability_score === "number" ? row.reliability_score : null,
+    dataState: "unknown",
     pefas: {
-      P: row.pefas_p,
-      E: row.pefas_e,
-      F: row.pefas_f,
-      A: row.pefas_a,
-      S: row.pefas_s,
+      P: typeof row.pefas_p === "number" ? row.pefas_p : null,
+      E: typeof row.pefas_e === "number" ? row.pefas_e : null,
+      F: typeof row.pefas_f === "number" ? row.pefas_f : null,
+      A: typeof row.pefas_a === "number" ? row.pefas_a : null,
+      S: typeof row.pefas_s === "number" ? row.pefas_s : null,
     },
-    mimoShort: row.mimo_short,
-    reasons: row.reasons,
-    vigilances: row.vigilances,
+    mimoShort: row.mimo_short || null,
+    reasons: row.reasons || [],
+    vigilances: row.vigilances || [],
     specs: row.specs || {},
+  };
+
+  return {
+    ...offer,
+    dataState: getOfferDataState(offer),
   };
 }
 

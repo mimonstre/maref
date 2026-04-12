@@ -1,0 +1,9 @@
+-- MAREF intentionally ships without seeded offers.
+-- Every catalog row must come from a traceable source of truth.
+-- Missing data should remain missing rather than simulated.
+--
+-- Optional cleanup for an existing environment:
+-- DELETE FROM project_offers;
+-- DELETE FROM favorites;
+-- DELETE FROM view_history;
+-- DELETE FROM offers;

@@ -1,3 +1,4 @@
+import { hasEnoughDataForScore } from "@/lib/core";
 import type { Offer } from "@/lib/data";
 
 export const PEFAS_INFO: Record<string, { name: string; desc: string }> = {
@@ -54,6 +55,10 @@ export function categorizeSpecs(specs: Record<string, string>): Record<string, [
 }
 
 export function generateMimoAnalysis(offer: Offer): string {
+  if (!hasEnoughDataForScore(offer)) {
+    return "Les donnees disponibles sur cette offre sont insuffisantes pour produire une analyse fiable.";
+  }
+
   const strong: string[] = [];
   const weak: string[] = [];
 
@@ -68,14 +73,16 @@ export function generateMimoAnalysis(offer: Offer): string {
   if (offer.pefas.A < 55) weak.push("la fiabilite de l ecosysteme est incertaine");
   if (offer.pefas.S < 55) weak.push("la stabilite a long terme n est pas garantie");
 
-  let text = offer.brand + " " + offer.product + " obtient un score de " + offer.score + "/100 chez " + offer.merchant + ". ";
+  let text = offer.brand + " " + offer.product + " dispose de donnees exploitables chez " + offer.merchant + ". ";
   if (strong.length > 0) text += "Points forts : " + strong.join(", ") + ". ";
   if (weak.length > 0) text += "Points d attention : " + weak.join(", ") + ". ";
 
-  if (offer.score >= 85) text += "C est l une des meilleures offres disponibles dans cette categorie.";
-  else if (offer.score >= 72) text += "L offre est bien positionnee. Quelques axes meritent verification.";
-  else if (offer.score >= 58) text += "L offre est dans la moyenne. Comparez avec les alternatives.";
-  else if (offer.score >= 42) text += "Plusieurs indicateurs sont en tension.";
+  const pefasAverage = Math.round((Object.values(offer.pefas).reduce((sum, value) => sum + (value || 0), 0)) / 5);
+
+  if (pefasAverage >= 85) text += "Les axes disponibles placent cette offre parmi les plus solides de sa categorie.";
+  else if (pefasAverage >= 72) text += "Les axes disponibles sont globalement favorables, avec quelques points a verifier.";
+  else if (pefasAverage >= 58) text += "Le niveau reste moyen : une comparaison reste recommandee.";
+  else if (pefasAverage >= 42) text += "Plusieurs indicateurs restent fragiles.";
   else text += "Cette offre presente des faiblesses significatives.";
 
   return text;
@@ -115,17 +122,4 @@ export function generateSpecsMimo(specs: Record<string, string>): string {
   text += "Ce produit dispose de " + entries.length + " caracteristiques techniques documentees.";
 
   return text;
-}
-
-export function generatePriceHistory(price: number): number[] {
-  const points: number[] = [];
-  let current = price * 1.05;
-
-  for (let i = 0; i < 12; i++) {
-    current = Math.max(price * 0.82, Math.min(price * 1.2, current + (i % 2 === 0 ? -12 : 8)));
-    points.push(Math.round(current));
-  }
-
-  points[11] = price;
-  return points;
 }

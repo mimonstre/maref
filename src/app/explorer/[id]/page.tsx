@@ -3,64 +3,22 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ScoreCircle, StatusBadge, AxisBar, MimoCard, Toast, LoadingSkeleton, EmptyState } from "@/components/shared/Score";
+import { AxisBar, DataTruthBadge, EmptyState, IncompleteDataWarning, LoadingSkeleton, MimoCard, NoDataBlock, ScoreCircle, StatusBadge, Toast } from "@/components/shared/Score";
 import {
   categorizeSpecs,
-  generatePriceHistory,
   generateSpecsMimo,
   PEFAS_INFO,
   SPEC_ICONS,
 } from "@/features/offers/analysis";
 import { getCategoryIcon } from "@/lib/categories";
-import { deriveUserJourney } from "@/lib/core";
+import { deriveUserJourney, getOfferTruthDescriptor } from "@/lib/core";
 import type { Offer } from "@/lib/data";
 import { generateMimo } from "@/lib/mimo/engine";
 import { analyzeProject } from "@/lib/projects/service";
 import { getOfferDisplayScore, rankOffersByScore, toBaseOffer } from "@/lib/score/engine";
 import { addOfferToProject, getProjectsWithOffers, type Project } from "@/features/projects/api";
+import { addOfferToCompareGroups } from "@/features/compare/store";
 import { addFavorite, getFavorites, getOfferById, getOffers, recordView, removeFavorite } from "@/lib/queries";
-
-function PriceChart({ history, currentPrice }: { history: number[]; currentPrice: number }) {
-  const min = Math.min(...history);
-  const max = Math.max(...history);
-  const range = max - min || 1;
-  const path = history
-    .map((value, index) => {
-      const x = (index / 11) * 100;
-      const y = 100 - ((value - min) / range) * 80 - 10;
-      return (index === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
-    })
-    .join(" ");
-  const trend = currentPrice < history[0] ? "En baisse" : currentPrice > history[0] ? "En hausse" : "Stable";
-  const trendColor = trend === "En baisse" ? "bg-emerald-100 text-emerald-800" : trend === "En hausse" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-600";
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="font-bold text-sm">Historique de prix</h4>
-        <span className={"text-[0.65rem] font-semibold px-2 py-0.5 rounded-full " + trendColor}>{trend}</span>
-      </div>
-      <svg viewBox="0 0 100 100" className="w-full" style={{ height: 80 }} preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2e8b57" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#2e8b57" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path d={path + " L100,100 L0,100 Z"} fill="url(#priceGrad)" />
-        <path d={path} fill="none" stroke="#2e8b57" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      </svg>
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-[0.65rem] text-gray-400">-12 mois</span>
-        <div className="flex gap-3">
-          <span className="text-[0.65rem] text-gray-400">Min: {min.toLocaleString("fr-FR")} EUR</span>
-          <span className="text-[0.65rem] text-gray-400">Max: {max.toLocaleString("fr-FR")} EUR</span>
-        </div>
-        <span className="text-[0.65rem] text-gray-400">Aujourd hui</span>
-      </div>
-    </div>
-  );
-}
 
 export default function OfferDetailPage() {
   const params = useParams();
@@ -74,7 +32,6 @@ export default function OfferDetailPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
   const [toastMsg, setToastMsg] = useState("");
-  const [priceHistory, setPriceHistory] = useState<number[]>([]);
   const [showAllReasons, setShowAllReasons] = useState(false);
   const [showAllVigilances, setShowAllVigilances] = useState(false);
   const [activeSpecCat, setActiveSpecCat] = useState<string | null>(null);
@@ -94,7 +51,6 @@ export default function OfferDetailPage() {
 
       if (currentOffer) {
         void recordView(currentOffer.id);
-        setPriceHistory(generatePriceHistory(currentOffer.price));
 
         const sameSubcategoryOffers = await getOffers({ subcategory: currentOffer.subcategory });
         setAlternatives(
@@ -150,6 +106,20 @@ export default function OfferDetailPage() {
     setShowProjectMenu(false);
   }
 
+  function handleCompareOffer(nextOffer: Offer) {
+    const result = addOfferToCompareGroups(nextOffer);
+
+    if (result.status === "exists") {
+      showToast("Deja dans la comparaison " + result.family.label);
+    } else if (result.status === "full") {
+      showToast("Comparaison " + result.family.label + " deja complete");
+    } else {
+      showToast("Ajoute a la comparaison " + result.family.label);
+    }
+
+    router.push("/comparer");
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -179,9 +149,8 @@ export default function OfferDetailPage() {
   }
 
   const categoryIcon = getCategoryIcon(offer.category);
+  const truth = getOfferTruthDescriptor(offer);
   const mimoText = generateMimo({ offer, mode: "offer" });
-  const costUsage = Math.round(offer.price * 0.08);
-  const costTotal = offer.price + costUsage * 4;
   const bestAxis = Object.entries(offer.pefas).sort((a, b) => b[1] - a[1])[0];
   const worstAxis = Object.entries(offer.pefas).sort((a, b) => a[1] - b[1])[0];
   const specCategories = categorizeSpecs(offer.specs);
@@ -228,7 +197,7 @@ export default function OfferDetailPage() {
     <div className="space-y-4">
       <Toast message={toastMsg} />
 
-      <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 transition-colors">
+      <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <polyline points="15 18 9 12 15 6" />
         </svg>
@@ -245,27 +214,40 @@ export default function OfferDetailPage() {
             <div className="flex gap-1.5 mt-2 flex-wrap">
               <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">{offer.merchant}</span>
               <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">{offer.subcategory}</span>
+              <DataTruthBadge label={truth.label} state={truth.state} />
             </div>
           </div>
         </div>
       </div>
+
+      {truth.state !== "reliable" && (
+        <IncompleteDataWarning description={truth.description + (truth.missingFields.length ? " Champs manquants : " + truth.missingFields.join(", ") + "." : "")} />
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div>
             <span className="text-2xl font-extrabold">{offer.price.toLocaleString("fr-FR")} EUR</span>
             {offer.barredPrice && <span className="text-sm text-gray-400 line-through ml-2">{offer.barredPrice.toLocaleString("fr-FR")} EUR</span>}
-            {offer.barredPrice && <span className="text-xs font-semibold text-emerald-700 ml-2">-{Math.round((1 - offer.price / offer.barredPrice) * 100)}%</span>}
+            {offer.barredPrice && <span className="text-xs font-semibold text-blue-700 ml-2">-{Math.round((1 - offer.price / offer.barredPrice) * 100)}%</span>}
           </div>
-          <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + (offer.availability === "En stock" ? "bg-emerald-100 text-emerald-800" : "bg-yellow-100 text-yellow-700")}>{offer.availability}</span>
+          <span className={"text-xs font-semibold px-2.5 py-1 rounded-full " + (offer.availability === "En stock" ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-700")}>{offer.availability}</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          {[{ l: "Livraison", v: offer.delivery }, { l: "Delai", v: "48h" }, { l: "Retour", v: "30 jours" }, { l: "Garantie", v: offer.warranty }].map((item) => (
+        <div className="grid grid-cols-3 gap-2">
+          {[{ l: "Livraison", v: offer.delivery }, { l: "Disponibilite", v: offer.availability }, { l: "Garantie", v: offer.warranty }].map((item) => (
             <div key={item.l} className="bg-gray-50 rounded-lg p-2 text-center">
               <p className="text-[0.6rem] text-gray-400">{item.l}</p>
               <p className="text-xs font-semibold">{item.v}</p>
             </div>
           ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {offer.lastUpdated && <span className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700">Mis a jour : {offer.lastUpdated}</span>}
+          {offer.sourceUrl && (
+            <a href={offer.sourceUrl} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 transition-colors">
+              Voir la source
+            </a>
+          )}
         </div>
       </div>
 
@@ -282,9 +264,9 @@ export default function OfferDetailPage() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 mt-3">
-          <div className="bg-emerald-50 rounded-lg p-2.5">
-            <p className="text-[0.65rem] text-emerald-600 font-medium">Meilleur axe</p>
-            <p className="text-sm font-bold text-emerald-800">{PEFAS_INFO[bestAxis[0]]?.name} ({bestAxis[1]})</p>
+          <div className="bg-blue-50 rounded-lg p-2.5">
+            <p className="text-[0.65rem] text-blue-600 font-medium">Meilleur axe</p>
+            <p className="text-sm font-bold text-blue-800">{PEFAS_INFO[bestAxis[0]]?.name} ({bestAxis[1]})</p>
           </div>
           <div className="bg-yellow-50 rounded-lg p-2.5">
             <p className="text-[0.65rem] text-yellow-600 font-medium">Axe a surveiller</p>
@@ -296,7 +278,7 @@ export default function OfferDetailPage() {
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[0.7rem] font-bold text-emerald-700 uppercase tracking-wide">Decision guidee</p>
+            <p className="text-[0.7rem] font-bold text-blue-700 uppercase tracking-wide">Decision guidee</p>
             <h3 className="font-bold mt-1">
               {activeProject ? "Impact sur " + activeProject.name : "Projetez cette offre dans un projet"}
             </h3>
@@ -307,15 +289,15 @@ export default function OfferDetailPage() {
         {activeProject && projectedAnalysis && (
           <div className="grid grid-cols-3 gap-2 mt-4">
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-emerald-700">{projectedOffers.length}</p>
+              <p className="text-sm font-bold text-blue-700">{projectedOffers.length}</p>
               <p className="text-[0.65rem] text-gray-500">Offres projet</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-emerald-700">{projectedAnalysis.budgetStatus}</p>
+              <p className="text-sm font-bold text-blue-700">{projectedAnalysis.budgetStatus}</p>
               <p className="text-[0.65rem] text-gray-500">Budget</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-emerald-700">
+              <p className="text-sm font-bold text-blue-700">
                 {projectedBestOffer?.id === offer.id ? "Oui" : "A valider"}
               </p>
               <p className="text-[0.65rem] text-gray-500">Choix recommande</p>
@@ -323,27 +305,27 @@ export default function OfferDetailPage() {
           </div>
         )}
         {activeProject && projectedAnalysis && (
-          <div className="relative bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-xl p-3 mt-4">
-            <span className="absolute -top-2 left-3 bg-emerald-700 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded">Mimo</span>
+          <div className="relative bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-3 mt-4">
+            <span className="absolute -top-2 left-3 bg-blue-700 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded">Mimo</span>
             <p className="text-xs text-gray-700 mt-2 leading-relaxed">{projectedAnalysis.recommendation}</p>
           </div>
         )}
         <div className="flex gap-2 mt-4 flex-wrap">
           {activeProject ? (
-            <button onClick={() => void addToProject(activeProject.id)} className="text-xs font-semibold bg-emerald-700 text-white px-3 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
+            <button onClick={() => void addToProject(activeProject.id)} className="text-xs font-semibold bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-800 transition-colors">
               {alreadyInActiveProject ? "Deja dans le projet" : "Ajouter a " + activeProject.name}
             </button>
           ) : (
-            <button onClick={() => router.push("/projets")} className="text-xs font-semibold bg-emerald-700 text-white px-3 py-2 rounded-lg hover:bg-emerald-800 transition-colors">
+            <button onClick={() => router.push("/projets")} className="text-xs font-semibold bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-800 transition-colors">
               Creer un projet
             </button>
           )}
           {activeProject && compareIds.length >= 2 && (
-            <Link href={"/comparer?project=" + activeProject.id + "&ids=" + compareIds.join(",")} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-emerald-300 transition-colors">
+            <Link href={"/comparer?project=" + activeProject.id + "&ids=" + compareIds.join(",")} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-blue-300 transition-colors">
               Comparer dans ce projet
             </Link>
           )}
-          <Link href="/projets" className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-emerald-300 transition-colors">
+          <Link href="/projets" className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-blue-300 transition-colors">
             Voir mes projets
           </Link>
         </div>
@@ -388,7 +370,7 @@ export default function OfferDetailPage() {
               <p className="text-xs text-gray-400 mt-0.5">{Object.keys(offer.specs).length} caracteristiques</p>
             </div>
             {hasSpecs && (
-              <button onClick={() => setShowAllSpecs(!showAllSpecs)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
+              <button onClick={() => setShowAllSpecs(!showAllSpecs)} className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
                 {showAllSpecs ? "Reduire" : "Tout voir"}
               </button>
             )}
@@ -446,7 +428,7 @@ export default function OfferDetailPage() {
                             (key.includes("sonore") && parseInt(value) >= 55);
 
                           return (
-                            <div key={key} className={"flex items-center justify-between py-2 border-b border-gray-50 last:border-0 " + (isGood ? "bg-emerald-50/50 -mx-2 px-2 rounded" : isBad ? "bg-red-50/50 -mx-2 px-2 rounded" : "")}>
+                            <div key={key} className={"flex items-center justify-between py-2 border-b border-gray-50 last:border-0 " + (isGood ? "bg-blue-50/50 -mx-2 px-2 rounded" : isBad ? "bg-red-50/50 -mx-2 px-2 rounded" : "")}>
                               <span className="text-xs text-gray-600">{key}</span>
                               <div className="flex items-center gap-1.5">
                                 <span className="text-xs font-semibold text-gray-800">{value}</span>
@@ -473,17 +455,17 @@ export default function OfferDetailPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <h4 className="font-bold text-sm mb-2 text-emerald-700">Points forts ({offer.reasons.length})</h4>
+        <h4 className="font-bold text-sm mb-2 text-blue-700">Points forts ({offer.reasons.length})</h4>
         {(showAllReasons ? offer.reasons : offer.reasons.slice(0, 3)).map((reason, index) => (
           <div key={index} className="py-2 border-b border-gray-100 last:border-0 text-sm flex items-center gap-2">
-            <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             {reason}
           </div>
         ))}
         {offer.reasons.length > 3 && (
-          <button onClick={() => setShowAllReasons(!showAllReasons)} className="text-xs font-semibold text-emerald-700 mt-2 hover:underline">
+          <button onClick={() => setShowAllReasons(!showAllReasons)} className="text-xs font-semibold text-blue-700 mt-2 hover:underline">
             {showAllReasons ? "Voir moins" : "Voir tout (" + offer.reasons.length + ")"}
           </button>
         )}
@@ -508,47 +490,28 @@ export default function OfferDetailPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <h4 className="font-bold text-sm mb-3">Cout total etendu</h4>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between py-1.5">
-            <span className="text-sm text-gray-600">Cout d achat</span>
-            <span className="font-semibold text-sm">{offer.price.toLocaleString("fr-FR")} EUR</span>
-          </div>
-          <div className="flex items-center justify-between py-1.5">
-            <span className="text-sm text-gray-600">Cout d usage / an</span>
-            <span className="font-semibold text-sm">{costUsage} EUR</span>
-          </div>
-          <div className="flex items-center justify-between py-1.5">
-            <span className="text-sm text-gray-600">Cout usage sur 4 ans</span>
-            <span className="font-semibold text-sm">{(costUsage * 4).toLocaleString("fr-FR")} EUR</span>
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t-2 border-gray-200">
-            <span className="font-bold">Cout total sur 4 ans</span>
-            <span className="font-extrabold text-lg text-emerald-700">{costTotal.toLocaleString("fr-FR")} EUR</span>
-          </div>
-        </div>
-      </div>
-
-      {priceHistory.length > 0 && <PriceChart history={priceHistory} currentPrice={offer.price} />}
+      <NoDataBlock
+        title="Historique de prix indisponible"
+        description="MAREF ne genere plus de courbe de prix simulee. Tant qu une source historique reelle n est pas disponible, cette section reste volontairement vide."
+      />
 
       {alternatives.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-sm">Alternatives ({alternatives.length})</h3>
-            <button onClick={() => router.push("/explorer")} className="text-xs font-semibold text-emerald-700">Voir tout</button>
+            <button onClick={() => router.push("/explorer")} className="text-xs font-semibold text-blue-700">Voir tout</button>
           </div>
           <div className="space-y-2">
             {alternatives.map((alternative) => (
-              <div key={alternative.id} onClick={() => router.push("/explorer/" + alternative.id)} className="bg-white rounded-xl border border-gray-200 p-3 flex gap-3 hover:shadow-md hover:border-emerald-300 transition-all cursor-pointer group">
-                <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-emerald-50 transition-colors">
+              <div key={alternative.id} onClick={() => router.push("/explorer/" + alternative.id)} className="bg-white rounded-xl border border-gray-200 p-3 flex gap-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group">
+                <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-50 transition-colors">
                   {getCategoryIcon(alternative.category)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[0.65rem] text-gray-400 uppercase font-medium">{alternative.brand}</p>
-                      <p className="font-semibold text-xs truncate group-hover:text-emerald-700">{alternative.product}</p>
+                      <p className="font-semibold text-xs truncate group-hover:text-blue-700">{alternative.product}</p>
                     </div>
                     <ScoreCircle score={getOfferDisplayScore(alternative)} size="xs" />
                   </div>
@@ -565,15 +528,15 @@ export default function OfferDetailPage() {
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
         <div className="flex gap-2 flex-wrap">
-          <button onClick={toggleFav} className={"flex-1 text-sm font-semibold px-4 py-3 rounded-xl transition-colors " + (isFav ? "bg-emerald-700 text-white shadow-md" : "bg-white border border-gray-200 text-gray-700 hover:border-emerald-300")}>
+          <button onClick={toggleFav} className={"flex-1 text-sm font-semibold px-4 py-3 rounded-xl transition-colors " + (isFav ? "bg-blue-700 text-white shadow-md" : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300")}>
             {isFav ? "Sauvegardee" : "Sauvegarder"}
           </button>
-          <button onClick={() => router.push("/comparer?ids=" + offer.id)} className="flex-1 text-sm font-semibold px-4 py-3 rounded-xl bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors">
+          <button onClick={() => handleCompareOffer(offer)} className="flex-1 text-sm font-semibold px-4 py-3 rounded-xl bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors">
             Comparer
           </button>
         </div>
         <div className="relative mt-2">
-          <button onClick={() => setShowProjectMenu(!showProjectMenu)} className="w-full text-sm font-semibold px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-emerald-300 transition-colors">
+          <button onClick={() => setShowProjectMenu(!showProjectMenu)} className="w-full text-sm font-semibold px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-300 transition-colors">
             Ajouter au projet
           </button>
           {showProjectMenu && (
@@ -583,7 +546,7 @@ export default function OfferDetailPage() {
                 {projects.length === 0 ? (
                   <div className="px-4 py-3 text-center">
                     <p className="text-sm text-gray-500 mb-2">Aucun projet</p>
-                    <button onClick={() => router.push("/projets")} className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
+                    <button onClick={() => router.push("/projets")} className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg">
                       Creer un projet
                     </button>
                   </div>

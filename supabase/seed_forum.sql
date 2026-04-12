@@ -1,0 +1,6 @@
+-- MAREF intentionally ships without seeded forum content.
+-- The forum must remain empty until real users publish real topics and replies.
+--
+-- Optional cleanup for an existing environment:
+-- DELETE FROM forum_replies;
+-- DELETE FROM forum_topics;

@@ -39,3 +39,11 @@ export function onAuthChange(callback: (user: AuthUser) => void) {
     callback(session?.user || null);
   });
 }
+
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: typeof window !== 'undefined' ? window.location.origin + '/login' : '',
+  });
+  if (error) return { error: error.message };
+  return { error: null };
+}

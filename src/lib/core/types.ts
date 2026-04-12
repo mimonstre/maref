@@ -9,6 +9,8 @@ export type CategoryDefinition = {
   }[];
 };
 
+export type DataTruthState = "reliable" | "partial" | "unknown";
+
 export type Offer = {
   id: string;
   product: string;
@@ -22,19 +24,23 @@ export type Offer = {
   availability: string;
   delivery: string;
   warranty: string;
-  score: number;
-  status: string;
-  statusColor: string;
-  confidence: string;
-  freshness: string;
+  score: number | null;
+  status: string | null;
+  statusColor: string | null;
+  confidence: string | null;
+  freshness: string | null;
+  sourceUrl: string | null;
+  lastUpdated: string | null;
+  reliabilityScore: number | null;
+  dataState: DataTruthState;
   pefas: {
-    P: number;
-    E: number;
-    F: number;
-    A: number;
-    S: number;
+    P: number | null;
+    E: number | null;
+    F: number | null;
+    A: number | null;
+    S: number | null;
   };
-  mimoShort: string;
+  mimoShort: string | null;
   reasons: string[];
   vigilances: string[];
   specs: Record<string, string>;

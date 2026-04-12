@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { CATEGORIES } from "@/lib/categories";
 import { computeScore, getScoreStatus } from "@/lib/score";
 import { getAdminOffers, deleteAdminOffer, saveAdminOffer } from "@/features/admin/api";
 import { EMPTY_ADMIN_FORM, ADMIN_SUBCATEGORIES, getAdminFormFromOffer, getNextAdminForm } from "@/features/admin/form";
@@ -102,7 +103,7 @@ export default function AdminPage() {
       parseInt(form.pefas_f) || 70,
       parseInt(form.pefas_a) || 70,
       parseInt(form.pefas_s) || 70,
-    );
+    ) ?? 0;
     const currentStatus = getScoreStatus(currentScore);
 
     return (
@@ -114,22 +115,22 @@ export default function AdminPage() {
           </button>
         </div>
 
-        <div className="bg-gradient-to-br from-emerald-700 to-emerald-800 rounded-2xl p-4 text-white shadow-lg">
+        <div className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-2xl p-4 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-emerald-200 text-xs uppercase">{form.brand || "Marque"}</p>
+              <p className="text-blue-200 text-xs uppercase">{form.brand || "Marque"}</p>
               <p className="font-bold">{form.product || "Nom du produit"}</p>
-              <p className="text-emerald-200 text-xs">{form.merchant} Â· {form.price ? form.price + " EUR" : "Prix"}</p>
+              <p className="text-blue-200 text-xs">{form.merchant} - {form.price ? form.price + " EUR" : "Prix"}</p>
             </div>
             <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-bold">
               {currentScore}
             </div>
           </div>
-          <p className="text-emerald-200 text-xs mt-2">{currentStatus.label} Â· Score calcule en temps reel</p>
+          <p className="text-blue-200 text-xs mt-2">{currentStatus.label} - Score calcule en temps reel</p>
         </div>
 
         {message && (
-          <div className={"rounded-xl p-3 text-sm " + (message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200")}>
+          <div className={"rounded-xl p-3 text-sm " + (message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-blue-50 text-blue-700 border border-blue-200")}>
             {message}
           </div>
         )}
@@ -139,19 +140,19 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Nom du produit *</label>
-              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Ex: Lave-linge 9kg A+++" value={form.product} onChange={(e) => updateForm("product", e.target.value)} />
+              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="Ex: Lave-linge 9kg A+++" value={form.product} onChange={(e) => updateForm("product", e.target.value)} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Marque *</label>
-              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Ex: Samsung" value={form.brand} onChange={(e) => updateForm("brand", e.target.value)} />
+              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="Ex: Samsung" value={form.brand} onChange={(e) => updateForm("brand", e.target.value)} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Modele / Reference</label>
-              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="Ex: WW90T554DAW" value={form.model} onChange={(e) => updateForm("model", e.target.value)} />
+              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="Ex: WW90T554DAW" value={form.model} onChange={(e) => updateForm("model", e.target.value)} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Marchand</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.merchant} onChange={(e) => updateForm("merchant", e.target.value)}>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.merchant} onChange={(e) => updateForm("merchant", e.target.value)}>
                 {["Darty", "Boulanger", "Fnac", "Cdiscount", "Amazon", "BUT", "Electro Depot", "Conforama"].map((merchant) => (
                   <option key={merchant}>{merchant}</option>
                 ))}
@@ -162,15 +163,15 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Categorie</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.category} onChange={(e) => updateForm("category", e.target.value)}>
-                <option value="electromenager">Electromenager</option>
-                <option value="froid">Froid</option>
-                <option value="televiseurs">Televiseurs</option>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.category} onChange={(e) => updateForm("category", e.target.value)}>
+                {CATEGORIES.map((category) => (
+                  <option key={category.id} value={category.id}>{category.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Sous-categorie</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.subcategory} onChange={(e) => updateForm("subcategory", e.target.value)}>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.subcategory} onChange={(e) => updateForm("subcategory", e.target.value)}>
                 {(ADMIN_SUBCATEGORIES[form.category] || []).map((subcategory) => (
                   <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>
                 ))}
@@ -184,15 +185,15 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Prix actuel (EUR) *</label>
-              <input type="number" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="549" value={form.price} onChange={(e) => updateForm("price", e.target.value)} />
+              <input type="number" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="549" value={form.price} onChange={(e) => updateForm("price", e.target.value)} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Ancien prix (EUR)</label>
-              <input type="number" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100" placeholder="649" value={form.barredPrice} onChange={(e) => updateForm("barredPrice", e.target.value)} />
+              <input type="number" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="649" value={form.barredPrice} onChange={(e) => updateForm("barredPrice", e.target.value)} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Disponibilite</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.availability} onChange={(e) => updateForm("availability", e.target.value)}>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.availability} onChange={(e) => updateForm("availability", e.target.value)}>
                 {["En stock", "Sous 48h", "Sous 5 jours", "Sur commande", "Rupture"].map((availability) => (
                   <option key={availability}>{availability}</option>
                 ))}
@@ -200,7 +201,7 @@ export default function AdminPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Livraison</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.delivery} onChange={(e) => updateForm("delivery", e.target.value)}>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.delivery} onChange={(e) => updateForm("delivery", e.target.value)}>
                 {["Gratuite", "9,99 EUR", "19,99 EUR", "29,99 EUR"].map((delivery) => (
                   <option key={delivery}>{delivery}</option>
                 ))}
@@ -208,7 +209,7 @@ export default function AdminPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Garantie</label>
-              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600" value={form.warranty} onChange={(e) => updateForm("warranty", e.target.value)}>
+              <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.warranty} onChange={(e) => updateForm("warranty", e.target.value)}>
                 {["1 an", "2 ans", "3 ans", "5 ans"].map((warranty) => (
                   <option key={warranty}>{warranty}</option>
                 ))}
@@ -218,18 +219,37 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4">
+          <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide">Tracabilite</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs font-semibold text-gray-500 mb-1">URL source</label>
+              <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="https://..." value={form.sourceUrl} onChange={(e) => updateForm("sourceUrl", e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Date de verification</label>
+              <input type="date" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" value={form.lastUpdated} onChange={(e) => updateForm("lastUpdated", e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Reliability score (0-100)</label>
+              <input type="number" min="0" max="100" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" value={form.reliabilityScore} onChange={(e) => updateForm("reliabilityScore", e.target.value)} />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">Sans source verifiable, l offre sera affichee comme donnee partielle ou inconnue.</p>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4">
           <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide">Score PEFAS (0-100)</h3>
           <p className="text-xs text-gray-400">Le score global est calcule automatiquement a partir des 5 axes</p>
           <div className="space-y-3">
             {[
-              { key: "pefas_p", label: "P â€” Pertinence", desc: "Adequation au besoin" },
-              { key: "pefas_e", label: "E â€” Economie", desc: "Rapport cout / valeur" },
-              { key: "pefas_f", label: "F â€” Fluidite", desc: "Facilite d acces" },
-              { key: "pefas_a", label: "A â€” Assurance", desc: "Fiabilite globale" },
-              { key: "pefas_s", label: "S â€” Stabilite", desc: "Durabilite" },
+              { key: "pefas_p", label: "P - Pertinence", desc: "Adequation au besoin" },
+              { key: "pefas_e", label: "E - Economie", desc: "Rapport cout / valeur" },
+              { key: "pefas_f", label: "F - Fluidite", desc: "Facilite d acces" },
+              { key: "pefas_a", label: "A - Assurance", desc: "Fiabilite globale" },
+              { key: "pefas_s", label: "S - Stabilite", desc: "Durabilite" },
             ].map((axis) => {
               const value = parseInt(form[axis.key as keyof AdminOfferForm]) || 0;
-              const color = value >= 70 ? "text-emerald-700" : value >= 50 ? "text-yellow-600" : "text-red-600";
+              const color = value >= 70 ? "text-blue-700" : value >= 50 ? "text-yellow-600" : "text-red-600";
               return (
                 <div key={axis.key}>
                   <div className="flex items-center justify-between mb-1">
@@ -243,7 +263,7 @@ export default function AdminPage() {
                     type="range"
                     min="0"
                     max="100"
-                    className="w-full h-2 rounded-full appearance-none bg-gray-200 accent-emerald-700"
+                    className="w-full h-2 rounded-full appearance-none bg-gray-200 accent-blue-700"
                     value={value}
                     onChange={(e) => updateForm(axis.key as keyof AdminOfferForm, e.target.value)}
                   />
@@ -266,18 +286,18 @@ export default function AdminPage() {
           <h3 className="font-bold text-sm text-gray-500 uppercase tracking-wide">Analyse</h3>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Points forts (un par ligne)</label>
-            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 resize-none" rows={3} placeholder={"Prix competitif\nMarque fiable\nBonne efficacite energetique"} value={form.reasons} onChange={(e) => updateForm("reasons", e.target.value)} />
+            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none" rows={3} placeholder={"Prix competitif\nMarque fiable\nBonne efficacite energetique"} value={form.reasons} onChange={(e) => updateForm("reasons", e.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Points de vigilance (un par ligne)</label>
-            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-emerald-600 resize-none" rows={3} placeholder={"Cout d usage a verifier\nGarantie limitee"} value={form.vigilances} onChange={(e) => updateForm("vigilances", e.target.value)} />
+            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none" rows={3} placeholder={"Cout d usage a verifier\nGarantie limitee"} value={form.vigilances} onChange={(e) => updateForm("vigilances", e.target.value)} />
           </div>
         </div>
 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full bg-emerald-700 text-white font-semibold py-3 rounded-xl hover:bg-emerald-800 transition-colors shadow-md text-sm disabled:opacity-50"
+          className="w-full bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors shadow-md text-sm disabled:opacity-50"
         >
           {saving ? "Enregistrement..." : editId ? "Modifier l offre" : "Ajouter l offre"}
         </button>
@@ -287,33 +307,33 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-gradient-to-br from-emerald-700 to-emerald-800 rounded-2xl p-5 text-white shadow-lg">
+      <div className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
         <h2 className="text-xl font-bold">Administration MAREF</h2>
-        <p className="text-emerald-200 text-sm mt-1">Gerez vos offres, ajoutez de vrais produits.</p>
+        <p className="text-blue-200 text-sm mt-1">Gerez vos offres, ajoutez de vrais produits.</p>
         <div className="grid grid-cols-3 gap-2 mt-3">
           <div className="bg-white/10 rounded-lg p-2 text-center">
             <p className="text-lg font-bold">{offers.length}</p>
-            <p className="text-[0.65rem] text-emerald-200">Offres</p>
+            <p className="text-[0.65rem] text-blue-200">Offres</p>
           </div>
           <div className="bg-white/10 rounded-lg p-2 text-center">
             <p className="text-lg font-bold">{new Set(offers.map((offer) => offer.brand)).size}</p>
-            <p className="text-[0.65rem] text-emerald-200">Marques</p>
+            <p className="text-[0.65rem] text-blue-200">Marques</p>
           </div>
           <div className="bg-white/10 rounded-lg p-2 text-center">
             <p className="text-lg font-bold">{new Set(offers.map((offer) => offer.merchant)).size}</p>
-            <p className="text-[0.65rem] text-emerald-200">Marchands</p>
+            <p className="text-[0.65rem] text-blue-200">Marchands</p>
           </div>
         </div>
       </div>
 
       <div className="flex gap-2">
-        <button onClick={() => { setForm(EMPTY_ADMIN_FORM); setEditId(null); setTab("add"); }} className="flex-1 bg-emerald-700 text-white font-semibold py-3 rounded-xl hover:bg-emerald-800 transition-colors shadow-md text-sm">
+        <button onClick={() => { setForm(EMPTY_ADMIN_FORM); setEditId(null); setTab("add"); }} className="flex-1 bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors shadow-md text-sm">
           + Ajouter une offre
         </button>
       </div>
 
       {message && (
-        <div className={"rounded-xl p-3 text-sm " + (message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200")}>
+        <div className={"rounded-xl p-3 text-sm " + (message.includes("Erreur") ? "bg-red-50 text-red-700 border border-red-200" : "bg-blue-50 text-blue-700 border border-blue-200")}>
           {message}
         </div>
       )}
@@ -343,11 +363,11 @@ export default function AdminPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-sm truncate">{offer.brand} {offer.product}</p>
-                    <p className="text-xs text-gray-500">{offer.merchant} Â· {offer.price} EUR Â· {offer.category}</p>
+                    <p className="text-xs text-gray-500">{offer.merchant} - {offer.price} EUR - {offer.category}</p>
                   </div>
                 </div>
                 <div className="flex gap-1.5 shrink-0 ml-2">
-                  <button onClick={() => startEdit(offer)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
+                  <button onClick={() => startEdit(offer)} className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
                     Modifier
                   </button>
                   {deleteConfirm === offer.id ? (
