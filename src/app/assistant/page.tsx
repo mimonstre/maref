@@ -62,10 +62,14 @@ export default function AssistantPage() {
         const projectsSummary = projects.map((p) => {
           const offers = projectOffers[p.id] || [];
           totalOffers += offers.length;
-          const avgScore =
-            offers.length > 0
-              ? Math.round(offers.reduce((acc, o) => acc + o.score, 0) / offers.length)
-              : 0;
+          const validOffers = offers.filter((o) => o.score !== null);
+
+const avgScore =
+  validOffers.length > 0
+    ? Math.round(
+        validOffers.reduce((acc, o) => acc + (o.score ?? 0), 0) / validOffers.length
+      )
+    : 0;
           return {
             name: p.name,
             offers: offers.length,
