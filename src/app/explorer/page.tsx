@@ -34,6 +34,30 @@ export default function ExplorerPage() {
   const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [bestBuyAvailable, setBestBuyAvailable] = useState(false);
+
+  async function fetchBestBuyOffersLive(input: {
+    category?: string | null;
+    subcategory?: string | null;
+    search?: string;
+    limit?: number;
+  }) {
+    const params = new URLSearchParams();
+    if (input.category) params.set("category", input.category);
+    if (input.subcategory) params.set("subcategory", input.subcategory);
+    if (input.search) params.set("search", input.search);
+    params.set("limit", String(input.limit || 10));
+
+    const response = await fetch("/api/bestbuy/offers?" + params.toString());
+    if (!response.ok) {
+      setBestBuyAvailable(false);
+      return [];
+    }
+
+    const json = await response.json();
+    setBestBuyAvailable(true);
+    return (json.offers || []) as Offer[];
+  }
 
   useEffect(() => {
     getOffers({}).then((data) => {
@@ -57,13 +81,28 @@ export default function ExplorerPage() {
 
     async function loadFilteredOffers() {
       setLoading(true);
-      const data = await getOffers({
+      const localData = await getOffers({
         category: activeCategory || undefined,
         subcategory: activeSubcategory || undefined,
         search: search || undefined,
         sort,
       });
-      setOffers(sort === "score" ? rankOffersByScore(data).map(toBaseOffer) : data);
+
+      let nextOffers = localData;
+
+      if (nextOffers.length === 0 && (activeSubcategory || search)) {
+        const liveData = await fetchBestBuyOffersLive({
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          search,
+          limit: 12,
+        });
+        if (liveData.length > 0) {
+          nextOffers = liveData;
+        }
+      }
+
+      setOffers(sort === "score" ? rankOffersByScore(nextOffers).map(toBaseOffer) : nextOffers);
       setLoading(false);
     }
 
@@ -346,6 +385,11 @@ export default function ExplorerPage() {
                 {inStockOnly ? "En stock uniquement" : "Inclure toutes disponibilites"}
               </button>
             </div>
+            {bestBuyAvailable && (
+              <p className="mt-3 text-xs font-medium text-blue-700">
+                Résultats live Best Buy affichés pour compléter le catalogue local.
+              </p>
+            )}
             {topSuggestion && (
               <div className="mt-4 flex items-center justify-between gap-3 rounded-[24px] bg-blue-50 border border-blue-200 p-4">
                 <div>

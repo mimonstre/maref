@@ -44,9 +44,8 @@ export default function ComparePageClient() {
     async function load() {
       setLoading(true);
       const data = await getOffers({});
+      let nextAllOffers = data;
       if (cancelled) return;
-
-      setAllOffers(data);
 
       let nextGroups = loadCompareGroups();
       const ids = searchParams.get("ids");
@@ -58,6 +57,22 @@ export default function ComparePageClient() {
           .filter(Boolean) as Offer[];
         nextGroups = mergeOffersIntoCompareGroups(incomingOffers);
       }
+
+      const bestBuyIds = Array.from(new Set(nextGroups.flatMap((group) => group.offerIds))).filter((id) =>
+        id.startsWith("bestbuy-"),
+      );
+
+      if (bestBuyIds.length > 0) {
+        const response = await fetch("/api/bestbuy/offers?ids=" + encodeURIComponent(bestBuyIds.join(",")));
+        if (response.ok) {
+          const json = await response.json();
+          const liveOffers = (json.offers || []) as Offer[];
+          nextAllOffers = [...data, ...liveOffers.filter((liveOffer) => !data.some((item) => item.id === liveOffer.id))];
+        }
+      }
+
+      if (cancelled) return;
+      setAllOffers(nextAllOffers);
 
       if (cancelled) return;
       setCompareGroups(nextGroups);

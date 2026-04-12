@@ -66,15 +66,41 @@ export default function OfferDetailPage() {
       setLoading(true);
 
       const offerId = String(params.id);
-      const currentOffer = await getOfferById(offerId);
+      let currentOffer = await getOfferById(offerId);
+
+      if (!currentOffer && offerId.startsWith("bestbuy-")) {
+        const response = await fetch("/api/bestbuy/offers?ids=" + encodeURIComponent(offerId));
+        if (response.ok) {
+          const json = await response.json();
+          currentOffer = (json.offers?.[0] || null) as Offer | null;
+        }
+      }
+
       setOffer(currentOffer);
 
       if (currentOffer) {
         void recordView(currentOffer.id);
 
         const sameSubcategoryOffers = await getOffers({ subcategory: currentOffer.subcategory });
+        let nextAlternatives = sameSubcategoryOffers.filter((item) => item.id !== currentOffer.id);
+
+        if (nextAlternatives.length === 0 && currentOffer.subcategory) {
+          const response = await fetch(
+            "/api/bestbuy/offers?category=" +
+              encodeURIComponent(currentOffer.category) +
+              "&subcategory=" +
+              encodeURIComponent(currentOffer.subcategory) +
+              "&limit=4",
+          );
+
+          if (response.ok) {
+            const json = await response.json();
+            nextAlternatives = ((json.offers || []) as Offer[]).filter((item) => item.id !== currentOffer.id);
+          }
+        }
+
         setAlternatives(
-          rankOffersByScore(sameSubcategoryOffers.filter((item) => item.id !== currentOffer.id))
+          rankOffersByScore(nextAlternatives)
             .map(toBaseOffer)
             .slice(0, 4),
         );
