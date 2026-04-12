@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { BookOpen, Bot, ChevronRight, MessageSquare, PencilLine } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import AuthRequiredPage from "@/components/auth/AuthRequiredPage";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MimoCard } from "@/components/shared/Score";
@@ -39,11 +39,11 @@ export default function GuidePage() {
   const [completedQuizzes, setCompletedQuizzes] = useState<Set<string>>(readCompletedQuizzes);
 
   function markLessonComplete(moduleId: string, lessonIndex: number, totalLessons: number) {
-    const newProgressValue = Math.round(((lessonIndex + 1) / totalLessons) * 100);
-    setModuleProgress((prev) => {
-      const current = prev[moduleId] ?? 0;
-      if (newProgressValue <= current) return prev;
-      const next = { ...prev, [moduleId]: newProgressValue };
+    const nextProgressValue = Math.round(((lessonIndex + 1) / totalLessons) * 100);
+    setModuleProgress((previous) => {
+      const current = previous[moduleId] ?? 0;
+      if (nextProgressValue <= current) return previous;
+      const next = { ...previous, [moduleId]: nextProgressValue };
       if (typeof window !== "undefined") {
         window.localStorage.setItem("maref_guide_progress", JSON.stringify(next));
       }
@@ -52,8 +52,8 @@ export default function GuidePage() {
   }
 
   function saveQuizCompleted(quizId: string) {
-    setCompletedQuizzes((prev) => {
-      const next = new Set(prev);
+    setCompletedQuizzes((previous) => {
+      const next = new Set(previous);
       next.add(quizId);
       if (typeof window !== "undefined") {
         window.localStorage.setItem("maref_completed_quizzes", JSON.stringify([...next]));
@@ -69,15 +69,28 @@ export default function GuidePage() {
 
   const selectedCategory = GUIDE_CATEGORIES.find((item) => item.id === activeCategory) || null;
   const modulesForCategory = GUIDE_MODULES.filter((item) => item.categoryId === activeCategory);
-  const quizzesForCategory = GUIDE_QUIZZES.filter((item) => item.categoryId === activeCategory);
   const currentModule = GUIDE_MODULES.find((item) => item.id === activeModule) || null;
   const currentQuiz = GUIDE_QUIZZES.find((item) => item.id === activeQuiz) || null;
+  const currentModuleQuiz = currentModule ? GUIDE_QUIZZES.find((item) => item.moduleId === currentModule.id) || null : null;
+
+  const categoryProgress = useMemo(() => {
+    return Object.fromEntries(
+      GUIDE_CATEGORIES.map((category) => {
+        const categoryModules = GUIDE_MODULES.filter((moduleItem) => moduleItem.categoryId === category.id);
+        const average =
+          categoryModules.length > 0
+            ? Math.round(categoryModules.reduce((sum, moduleItem) => sum + (moduleProgress[moduleItem.id] ?? 0), 0) / categoryModules.length)
+            : 0;
+        return [category.id, average];
+      }),
+    );
+  }, [moduleProgress]);
 
   if (loading || !user) {
     return (
       <AuthRequiredPage
         title="Guide réservé aux comptes connectés"
-        description="Connectez-vous pour suivre vos modules, vos quiz et votre progression d apprentissage."
+        description="Connectez-vous pour suivre vos modules, vos quiz et votre progression d'apprentissage."
       />
     );
   }
@@ -100,7 +113,7 @@ export default function GuidePage() {
             className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950"
           >
             <ChevronRight className="h-4 w-4 rotate-180" />
-            Retour au guide
+            Retour au module
           </button>
 
           <div className="premium-hero rounded-[32px] p-6 text-white">
@@ -111,8 +124,8 @@ export default function GuidePage() {
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-blue-100/90">
                 {passed
-                  ? "Très bien. Vous avez validé les réflexes essentiels de cette thématique."
-                  : "Le socle n est pas encore assez solide. Revenez sur le module puis retentez le quiz à froid."}
+                  ? "Très bien. Vous avez validé les réflexes essentiels de ce module."
+                  : "Le socle n'est pas encore assez solide. Revenez sur la leçon puis retentez le quiz à froid."}
               </p>
             </div>
           </div>
@@ -122,14 +135,16 @@ export default function GuidePage() {
               <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-blue-950">Niveau atteint</p>
               <p className="mt-3 text-2xl font-black text-slate-950">{pct}%</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                {passed ? "Quiz validé. Vous pouvez passer au module suivant ou approfondir ce thème." : "Quiz non validé. Mieux vaut consolider la méthode avant de continuer."}
+                {passed
+                  ? "Quiz validé. Vous pouvez continuer sur un autre module ou renforcer ce thème."
+                  : "Quiz non validé. La bonne suite est de relire le module puis de retester vos réflexes."}
               </p>
             </div>
             <MimoCard
               text={
                 passed
-                  ? "Bon signal : vous avez maintenant une base assez propre pour utiliser ce cadre dans vos projets et vos comparaisons."
-                  : "Le vrai objectif n est pas de cocher un quiz, mais de rendre vos décisions plus robustes. Reprenez les leçons, puis revenez."
+                  ? "Bon signal : vous avez maintenant une base exploitable pour utiliser cette méthode dans vos projets et vos comparaisons."
+                  : "Le but n'est pas de cocher un quiz. Le but est de rendre vos décisions plus solides et plus explicables."
               }
             />
           </div>
@@ -153,7 +168,7 @@ export default function GuidePage() {
               }}
               className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-400"
             >
-              Retour au guide
+              Retour au module
             </button>
           </div>
         </div>
@@ -180,7 +195,7 @@ export default function GuidePage() {
         <div className="premium-surface rounded-[30px] p-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[0.72rem] font-bold uppercase tracking-[0.2em] text-blue-950">Quiz</p>
+              <p className="text-[0.72rem] font-bold uppercase tracking-[0.2em] text-blue-950">Quiz du module</p>
               <h2 className="mt-2 text-2xl font-black text-slate-950">{currentQuiz.title}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">{currentQuiz.description}</p>
             </div>
@@ -220,13 +235,16 @@ export default function GuidePage() {
     );
   }
 
-  if (currentModule) {
+  if (currentModule && currentModuleQuiz) {
     const currentProgress = moduleProgress[currentModule.id] ?? 0;
     const totalLessons = currentModule.content.length;
 
     return (
       <div className="space-y-5">
-        <button onClick={() => setActiveModule(null)} className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950">
+        <button
+          onClick={() => setActiveModule(null)}
+          className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950"
+        >
           <ChevronRight className="h-4 w-4 rotate-180" />
           Retour à la catégorie
         </button>
@@ -241,6 +259,7 @@ export default function GuidePage() {
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{currentModule.difficulty}</span>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{currentModule.duration}</span>
               <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{currentModule.content.length} leçons</span>
+              <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">{currentModuleQuiz.questions.length} questions</span>
             </div>
             <div className="mt-5 h-2.5 overflow-hidden rounded-full bg-white/15">
               <div className="h-full rounded-full bg-white transition-all" style={{ width: `${currentProgress}%` }}></div>
@@ -248,7 +267,7 @@ export default function GuidePage() {
           </div>
         </div>
 
-        <MimoCard text="Ici, chaque leçon doit vous rendre meilleur dans une vraie décision d achat. Le but n est pas d apprendre du jargon, mais de construire des réflexes utiles." />
+        <MimoCard text="Un bon module doit vous aider à mieux choisir, mieux comparer et mieux justifier une décision réelle. Ici, la leçon et le quiz forment un seul parcours." />
 
         <div className="space-y-4">
           {currentModule.content.map((lesson, index) => {
@@ -258,7 +277,12 @@ export default function GuidePage() {
             return (
               <div key={index} className={"premium-card rounded-[28px] p-5 " + (completed ? "border-slate-300" : "")}>
                 <div className="flex items-start gap-4">
-                  <div className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold " + (completed ? "bg-blue-950 text-white" : "bg-slate-100 text-slate-500")}>
+                  <div
+                    className={
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-bold " +
+                      (completed ? "bg-blue-950 text-white" : "bg-slate-100 text-slate-500")
+                    }
+                  >
                     {completed ? "OK" : index + 1}
                   </div>
                   <div className="flex-1">
@@ -279,6 +303,49 @@ export default function GuidePage() {
             );
           })}
         </div>
+
+        <div className="premium-surface rounded-[30px] p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[0.72rem] font-bold uppercase tracking-[0.2em] text-blue-950">Quiz du module</p>
+              <h3 className="mt-2 text-2xl font-black text-slate-950">{currentModuleQuiz.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{currentModuleQuiz.description}</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-blue-950">
+              {currentModuleQuiz.questions.length} questions
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4">
+              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-400">Objectif</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                Vérifier que vous savez relier la méthode du module à une décision réelle, sans vous limiter à retenir des slogans.
+              </p>
+            </div>
+            <div className="rounded-[24px] border border-slate-200 bg-white p-4">
+              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-400">Statut</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">
+                {completedQuizzes.has(currentModuleQuiz.id) ? "Quiz déjà validé" : "Quiz à lancer"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                Le quiz contient 10 questions conçues pour tester les vrais réflexes liés à ce module.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setActiveQuiz(currentModuleQuiz.id);
+              setQuizStep(0);
+              setQuizAnswers([]);
+            }}
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-950"
+          >
+            <PencilLine className="h-4 w-4" />
+            Lancer le quiz
+          </button>
+        </div>
       </div>
     );
   }
@@ -286,7 +353,10 @@ export default function GuidePage() {
   if (selectedCategory) {
     return (
       <div className="space-y-5">
-        <button onClick={() => setActiveCategory(null)} className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950"
+        >
           <ChevronRight className="h-4 w-4 rotate-180" />
           Retour aux catégories
         </button>
@@ -296,85 +366,56 @@ export default function GuidePage() {
             <div>
               <p className="text-3xl">{selectedCategory.icon}</p>
               <p className="mt-4 text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-950">{selectedCategory.title}</p>
-              <h2 className="mt-2 text-3xl font-black text-slate-950">Modules et quiz de cette catégorie</h2>
+              <h2 className="mt-2 text-3xl font-black text-slate-950">Modules de cette catégorie</h2>
               <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">{selectedCategory.description}</p>
             </div>
             <div className="rounded-[24px] bg-slate-100 px-4 py-3 text-right">
-              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-500">Contenu</p>
-              <p className="mt-1 text-sm font-black text-blue-950">
-                {modulesForCategory.length} modules · {quizzesForCategory.length} quiz
-              </p>
+              <p className="text-[0.68rem] uppercase tracking-[0.16em] text-slate-500">Progression</p>
+              <p className="mt-1 text-sm font-black text-blue-950">{categoryProgress[selectedCategory.id] ?? 0}%</p>
             </div>
           </div>
         </div>
 
-        <div>
-          <h3 className="mb-3 text-lg font-black text-slate-950">Modules</h3>
-          <div className="space-y-3">
-            {modulesForCategory.map((moduleItem) => {
-              const progress = moduleProgress[moduleItem.id] ?? 0;
-              return (
-                <button
-                  key={moduleItem.id}
-                  onClick={() => setActiveModule(moduleItem.id)}
-                  className="premium-card flex w-full items-start gap-4 rounded-[28px] p-5 text-left transition-all hover:translate-y-[-2px]"
-                >
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-slate-100 text-2xl">
-                    {moduleItem.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <h4 className="text-base font-black text-slate-950">{moduleItem.title}</h4>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-[0.65rem] font-semibold text-blue-950">
-                        {progress}%
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{moduleItem.desc}</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{moduleItem.difficulty}</span>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{moduleItem.duration}</span>
-                    </div>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                      <div className="h-full rounded-full bg-blue-950" style={{ width: `${progress}%` }}></div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="mb-3 text-lg font-black text-slate-950">Quiz</h3>
-          <div className="space-y-3">
-            {quizzesForCategory.map((quizItem) => (
+        <div className="space-y-3">
+          {modulesForCategory.map((moduleItem) => {
+            const progress = moduleProgress[moduleItem.id] ?? 0;
+            const moduleQuiz = GUIDE_QUIZZES.find((quizItem) => quizItem.moduleId === moduleItem.id);
+            return (
               <button
-                key={quizItem.id}
-                onClick={() => {
-                  setActiveQuiz(quizItem.id);
-                  setQuizStep(0);
-                  setQuizAnswers([]);
-                }}
-                className="premium-card flex w-full items-center gap-4 rounded-[28px] p-5 text-left transition-all hover:translate-y-[-2px]"
+                key={moduleItem.id}
+                onClick={() => setActiveModule(moduleItem.id)}
+                className="premium-card flex w-full items-start gap-4 rounded-[28px] p-5 text-left transition-all hover:translate-y-[-2px]"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-slate-100 text-blue-950">
-                  <PencilLine className="h-5 w-5" />
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-slate-100 text-2xl">
+                  {moduleItem.icon}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <h4 className="text-base font-black text-slate-950">{quizItem.title}</h4>
-                    {completedQuizzes.has(quizItem.id) && (
-                      <span className="rounded-full bg-slate-200 px-3 py-1 text-[0.65rem] font-semibold text-blue-950">Validé</span>
+                    <h4 className="text-base font-black text-slate-950">{moduleItem.title}</h4>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-[0.65rem] font-semibold text-blue-950">
+                      {progress}%
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{moduleItem.desc}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{moduleItem.difficulty}</span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{moduleItem.duration}</span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                      {moduleItem.content.length} leçons
+                    </span>
+                    {moduleQuiz && (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                        {moduleQuiz.questions.length} questions
+                      </span>
                     )}
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{quizItem.description}</p>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    {quizItem.questions.length} questions
-                  </p>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-full rounded-full bg-blue-950" style={{ width: `${progress}%` }}></div>
+                  </div>
                 </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -388,9 +429,9 @@ export default function GuidePage() {
             <BookOpen className="h-3.5 w-3.5" />
             Guide MAREF
           </p>
-          <h1 className="mt-5 text-4xl font-black tracking-tight">Monter en compétence avant d acheter</h1>
+          <h1 className="mt-5 text-4xl font-black tracking-tight">Monter en compétence avant d&apos;acheter</h1>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-blue-100/90">
-            Le guide est organisé par thématiques utiles : choisir le bon appareil, comprendre une offre, comparer proprement et décider avec plus de recul.
+            Le guide est organisé par grandes thématiques utiles : choisir le bon appareil, comprendre une offre, comparer proprement et décider avec plus de recul.
           </p>
           <div className="mt-5 inline-flex items-center gap-3 rounded-full bg-white/10 px-4 py-2">
             <span className="text-sm font-bold">{totalProgress}%</span>
@@ -399,46 +440,44 @@ export default function GuidePage() {
         </div>
       </div>
 
-      <MimoCard text="Ici, le but n est pas de lire des slogans. Le guide doit vous aider à poser un meilleur cadre, repérer les bons critères et faire de meilleurs arbitrages dans le produit." />
+      <MimoCard text="Le guide n'est pas là pour remplir l'écran. Chaque catégorie doit vous aider à mieux cadrer votre besoin, mieux lire une offre et mieux arbitrer." />
 
       <div className="grid gap-4 md:grid-cols-3">
-        {GUIDE_CATEGORIES.map((category) => {
-          const categoryModules = GUIDE_MODULES.filter((moduleItem) => moduleItem.categoryId === category.id);
-          const categoryAverage =
-            categoryModules.length > 0
-              ? Math.round(categoryModules.reduce((sum, moduleItem) => sum + (moduleProgress[moduleItem.id] ?? 0), 0) / categoryModules.length)
-              : 0;
-
-          return (
-            <button
-              key={category.id}
-              onClick={() => setActiveCategory(category.id)}
-              className="premium-card rounded-[28px] p-5 text-left transition-all hover:translate-y-[-2px]"
-            >
-              <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-slate-100 text-2xl">
-                {category.icon}
-              </div>
-              <p className="mt-4 text-lg font-black text-slate-950">{category.title}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{category.description}</p>
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  {GUIDE_MODULES.filter((item) => item.categoryId === category.id).length} modules · {GUIDE_QUIZZES.filter((item) => item.categoryId === category.id).length} quiz
-                </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-blue-950">
-                  {categoryAverage}%
-                </span>
-              </div>
-            </button>
-          );
-        })}
+        {GUIDE_CATEGORIES.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setActiveCategory(category.id)}
+            className="premium-card rounded-[28px] p-5 text-left transition-all hover:translate-y-[-2px]"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-slate-100 text-2xl">
+              {category.icon}
+            </div>
+            <p className="mt-4 text-lg font-black text-slate-950">{category.title}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{category.description}</p>
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                {GUIDE_MODULES.filter((item) => item.categoryId === category.id).length} modules
+              </span>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-blue-950">
+                {categoryProgress[category.id] ?? 0}%
+              </span>
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/assistant" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md">
+        <Link
+          href="/assistant"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md"
+        >
           <Bot className="h-5 w-5 text-blue-950" />
           <span className="text-sm font-semibold">Demander à Mimo</span>
         </Link>
-        <Link href="/forum" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md">
+        <Link
+          href="/forum"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md"
+        >
           <MessageSquare className="h-5 w-5 text-blue-950" />
           <span className="text-sm font-semibold">Forum</span>
         </Link>

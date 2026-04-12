@@ -18,10 +18,10 @@ import { timeAgo } from "@/lib/format";
 
 const FORUM_TABS = [
   { id: "recent", label: "Récent" },
+  { id: "categorie", label: "Famille de produit" },
   { id: "produit", label: "Produit" },
-  { id: "magasin", label: "Magasin" },
-  { id: "livraison", label: "Livraison" },
-  { id: "garantie", label: "Garantie" },
+  { id: "enseigne", label: "Enseigne" },
+  { id: "marque", label: "Marque" },
 ];
 
 function getForumCategoryLabel(value: string) {
@@ -115,7 +115,9 @@ export default function ForumPage() {
 
     const result = await upvoteForumReply(replyId, reply.votes);
     if (result.success) {
-      setReplies((prev) => prev.map((item) => (item.id === replyId ? { ...item, votes: result.nextVotes } : item)));
+      setReplies((previous) =>
+        previous.map((item) => (item.id === replyId ? { ...item, votes: result.nextVotes } : item)),
+      );
     }
   }
 
@@ -123,11 +125,13 @@ export default function ForumPage() {
     activeTab === "recent"
       ? topics
       : topics.filter((topic) => {
-          const haystack = [topic.title, topic.content, topic.category, getForumCategoryLabel(topic.category)].join(" ").toLowerCase();
+          const haystack = [topic.title, topic.content, topic.category, getForumCategoryLabel(topic.category)]
+            .join(" ")
+            .toLowerCase();
+          if (activeTab === "categorie") return topic.category !== "general";
           if (activeTab === "produit") return /produit|appareil|lave|seche|frigo|tv|telephone|pc|tablette/.test(haystack);
-          if (activeTab === "magasin") return /magasin|marchand|vendeur|site/.test(haystack);
-          if (activeTab === "livraison") return /livraison|delai|expedition|stock/.test(haystack);
-          if (activeTab === "garantie") return /garantie|sav|retour|panne|reparation/.test(haystack);
+          if (activeTab === "enseigne") return /magasin|marchand|vendeur|site|darty|boulanger|fnac|amazon|cdiscount/.test(haystack);
+          if (activeTab === "marque") return /samsung|lg|bosch|whirlpool|sony|apple|xiaomi|lenovo|asus|hisense|haier|beko/.test(haystack);
           return true;
         });
 
@@ -164,7 +168,12 @@ export default function ForumPage() {
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center gap-2.5">
-            <div className={"flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white " + getForumAvatarColor(activeTopic.author_name)}>
+            <div
+              className={
+                "flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white " +
+                getForumAvatarColor(activeTopic.author_name)
+              }
+            >
               {activeTopic.author_name[0]}
             </div>
             <div>
@@ -175,7 +184,9 @@ export default function ForumPage() {
           <h2 className="mb-2 text-lg font-bold">{activeTopic.title}</h2>
           <p className="text-sm leading-relaxed text-gray-600">{activeTopic.content}</p>
           <div className="mt-3 flex gap-2">
-            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{getForumCategoryLabel(activeTopic.category)}</span>
+            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              {getForumCategoryLabel(activeTopic.category)}
+            </span>
             <span className="text-xs text-gray-400">{replies.length} réponse{replies.length > 1 ? "s" : ""}</span>
           </div>
         </div>
@@ -191,14 +202,22 @@ export default function ForumPage() {
               {replies.map((reply) => (
                 <div key={reply.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                   <div className="mb-2 flex items-center gap-2">
-                    <div className={"flex h-7 w-7 items-center justify-center rounded-full text-[0.65rem] font-bold text-white " + getForumAvatarColor(reply.author_name)}>
+                    <div
+                      className={
+                        "flex h-7 w-7 items-center justify-center rounded-full text-[0.65rem] font-bold text-white " +
+                        getForumAvatarColor(reply.author_name)
+                      }
+                    >
                       {reply.author_name[0]}
                     </div>
                     <span className="text-xs font-semibold">{reply.author_name}</span>
                     <span className="text-[0.65rem] text-gray-400">{timeAgo(reply.created_at)}</span>
                   </div>
                   <p className="text-sm leading-relaxed text-gray-700">{reply.content}</p>
-                  <button onClick={() => handleVote(reply.id)} className="mt-2 text-xs font-medium text-blue-950 transition-colors hover:text-slate-950">
+                  <button
+                    onClick={() => handleVote(reply.id)}
+                    className="mt-2 text-xs font-medium text-blue-950 transition-colors hover:text-slate-950"
+                  >
                     +1 ({reply.votes})
                   </button>
                 </div>
@@ -208,7 +227,7 @@ export default function ForumPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <h4 className="mb-2 text-sm font-bold">Repondre</h4>
+          <h4 className="mb-2 text-sm font-bold">Répondre</h4>
           <textarea
             className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-950"
             rows={3}
@@ -239,7 +258,7 @@ export default function ForumPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Forum</h2>
-          <p className="text-sm text-gray-500">Aucun topic n’est pré-rempli. La discussion commence avec de vrais utilisateurs.</p>
+          <p className="text-sm text-gray-500">Aucun topic n&apos;est pré-rempli. La discussion commence avec de vrais utilisateurs.</p>
         </div>
         <button
           onClick={() => setShowNewTopic(!showNewTopic)}
@@ -261,13 +280,13 @@ export default function ForumPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-500">Categorie</label>
+            <label className="mb-1 block text-xs font-semibold text-gray-500">Famille de produit</label>
             <select
               className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-950"
               value={newCategory}
               onChange={(event) => setNewCategory(event.target.value)}
             >
-              <option value="general">General</option>
+              <option value="general">Général</option>
               {CATEGORIES.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -280,7 +299,7 @@ export default function ForumPage() {
             <textarea
               className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-950"
               rows={4}
-              placeholder="Decrivez votre question ou partagez votre experience..."
+              placeholder="Décrivez votre question ou partagez votre expérience..."
               value={newContent}
               onChange={(event) => setNewContent(event.target.value)}
             ></textarea>
@@ -324,18 +343,27 @@ export default function ForumPage() {
       ) : filteredTopics.length === 0 ? (
         <EmptyState
           icon="?"
-          title="Il n y a encore aucune discussion"
-          description="Aucun topic n’est pré-rempli. Le premier contenu visible viendra d’un vrai compte utilisateur."
+          title="Il n'y a encore aucune discussion"
+          description="Aucun topic n&apos;est pré-rempli. Le premier contenu visible viendra d&apos;un vrai compte utilisateur."
           action={() => setShowNewTopic(true)}
-          actionLabel="Creer le premier topic"
+          actionLabel="Créer le premier topic"
         />
       ) : (
         <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white shadow-sm">
           {filteredTopics.map((topic) => (
-            <div key={topic.id} onClick={() => openTopic(topic)} className="cursor-pointer p-4 transition-colors hover:bg-gray-50">
+            <div
+              key={topic.id}
+              onClick={() => openTopic(topic)}
+              className="cursor-pointer p-4 transition-colors hover:bg-gray-50"
+            >
               <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={"flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white " + getForumAvatarColor(topic.author_name)}>
+                  <div
+                    className={
+                      "flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white " +
+                      getForumAvatarColor(topic.author_name)
+                    }
+                  >
                     {topic.author_name[0]}
                   </div>
                   <span className="text-xs font-semibold">{topic.author_name}</span>
@@ -346,7 +374,9 @@ export default function ForumPage() {
               <p className="line-clamp-2 text-xs text-gray-500">{topic.content}</p>
               <div className="mt-2 flex gap-3">
                 <span className="text-[0.7rem] text-gray-400">{topic.reply_count} réponse{topic.reply_count > 1 ? "s" : ""}</span>
-                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[0.65rem] font-medium text-gray-500">{getForumCategoryLabel(topic.category)}</span>
+                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[0.65rem] font-medium text-gray-500">
+                  {getForumCategoryLabel(topic.category)}
+                </span>
               </div>
             </div>
           ))}
@@ -354,9 +384,11 @@ export default function ForumPage() {
       )}
 
       <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 rounded-md bg-blue-950 px-2.5 py-0.5 text-[0.7rem] font-bold text-white shadow-sm">Mimo</span>
+        <span className="absolute -top-2.5 left-4 rounded-md bg-blue-950 px-2.5 py-0.5 text-[0.7rem] font-bold text-white shadow-sm">
+          Mimo
+        </span>
         <p className="mt-2 text-sm text-gray-800">
-          Le forum reste volontairement vide tant que la communauté ne publie pas de contenu réel. Aucun topic n’est pré-rempli.
+          Le forum reste volontairement vide tant que la communauté ne publie pas de contenu réel. Aucun topic n&apos;est pré-rempli.
         </p>
       </div>
     </div>

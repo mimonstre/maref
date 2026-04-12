@@ -5,6 +5,7 @@ import { getOfferCompareFamily } from "./families";
 import type { CompareGroup } from "./types";
 
 const STORAGE_KEY = "maref.compare.groups";
+const SNAPSHOT_STORAGE_KEY = "maref.compare.offer-snapshots";
 const MAX_OFFERS_PER_GROUP = 3;
 
 function canUseStorage() {
@@ -34,8 +35,98 @@ export function saveCompareGroups(groups: CompareGroup[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
 
+type CompareOfferSnapshot = Pick<
+  Offer,
+  | "id"
+  | "product"
+  | "brand"
+  | "model"
+  | "category"
+  | "subcategory"
+  | "merchant"
+  | "price"
+  | "barredPrice"
+  | "availability"
+  | "delivery"
+  | "warranty"
+  | "score"
+  | "status"
+  | "statusColor"
+  | "confidence"
+  | "freshness"
+  | "imageUrl"
+  | "sourceUrl"
+  | "lastUpdated"
+  | "reliabilityScore"
+  | "priceHistory"
+  | "dataState"
+  | "pefas"
+  | "mimoShort"
+  | "reasons"
+  | "vigilances"
+  | "specs"
+>;
+
+function loadSnapshotMap(): Record<string, CompareOfferSnapshot> {
+  if (!canUseStorage()) return {};
+
+  try {
+    const raw = window.localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, CompareOfferSnapshot>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSnapshotMap(snapshotMap: Record<string, CompareOfferSnapshot>) {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshotMap));
+}
+
+function persistOfferSnapshot(offer: Offer) {
+  const snapshotMap = loadSnapshotMap();
+  snapshotMap[String(offer.id)] = {
+    id: offer.id,
+    product: offer.product,
+    brand: offer.brand,
+    model: offer.model,
+    category: offer.category,
+    subcategory: offer.subcategory,
+    merchant: offer.merchant,
+    price: offer.price,
+    barredPrice: offer.barredPrice,
+    availability: offer.availability,
+    delivery: offer.delivery,
+    warranty: offer.warranty,
+    score: offer.score,
+    status: offer.status,
+    statusColor: offer.statusColor,
+    confidence: offer.confidence,
+    freshness: offer.freshness,
+    imageUrl: offer.imageUrl,
+    sourceUrl: offer.sourceUrl,
+    lastUpdated: offer.lastUpdated,
+    reliabilityScore: offer.reliabilityScore,
+    priceHistory: offer.priceHistory,
+    dataState: offer.dataState,
+    pefas: offer.pefas,
+    mimoShort: offer.mimoShort,
+    reasons: offer.reasons,
+    vigilances: offer.vigilances,
+    specs: offer.specs,
+  };
+  saveSnapshotMap(snapshotMap);
+}
+
+export function loadCompareOfferSnapshots(): Offer[] {
+  return Object.values(loadSnapshotMap()) as Offer[];
+}
+
 export function addOfferToCompareGroups(offer: Offer) {
   const offerId = String(offer.id);
+  persistOfferSnapshot(offer);
   const groups = loadCompareGroups().map((group) => ({
     ...group,
     offerIds: Array.from(new Set(group.offerIds.map((id) => String(id)))),
@@ -69,6 +160,8 @@ export function addOfferToCompareGroups(offer: Offer) {
 
 export function mergeOffersIntoCompareGroups(offers: Offer[]) {
   if (offers.length === 0) return loadCompareGroups();
+
+  offers.forEach((offer) => persistOfferSnapshot(offer));
 
   const currentGroups = loadCompareGroups();
   const groupedOffers = offers.reduce<Record<string, { label: string; ids: string[] }>>((accumulator, offer) => {

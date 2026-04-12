@@ -24,6 +24,7 @@ export type GuideModule = {
 export type GuideQuiz = {
   id: string;
   categoryId: string;
+  moduleId: string;
   title: string;
   description: string;
   questions: {
@@ -38,415 +39,268 @@ export const GUIDE_CATEGORIES: GuideCategory[] = [
   {
     id: "choisir",
     title: "Comment choisir ?",
-    description: "Apprendre à cadrer un besoin et choisir le bon appareil selon le contexte réel.",
+    description: "Poser un vrai besoin, filtrer l’essentiel et choisir le bon appareil selon votre contexte réel.",
     icon: "🎯",
   },
   {
     id: "offre",
     title: "Comprendre une offre",
-    description: "Lire un prix, une fiche produit, un marchand et un cadre de vente sans se faire piéger.",
+    description: "Lire les prix, le marché, l’enseigne, la garantie et le risque sans se faire embarquer.",
     icon: "🔎",
   },
   {
     id: "comparaison",
     title: "Comparer et décider",
-    description: "Construire une vraie short-list, lire PEFAS et arbitrer proprement entre 2 ou 3 références.",
+    description: "Construire une short-list, lire PEFAS et trancher proprement entre plusieurs offres.",
     icon: "⚖️",
   },
 ];
+
+function createQuestions(topic: string, context: string): GuideQuiz["questions"] {
+  return [
+    {
+      q: `Quel est le bon point de départ pour ${topic.toLowerCase()} ?`,
+      options: ["Le produit le plus populaire", "Le besoin réel", "Le plus gros rabais", "La marque la plus connue"],
+      correct: 1,
+      explanation: `Dans ${context}, la décision doit commencer par le besoin réel et les contraintes concrètes.`,
+    },
+    {
+      q: "Quel est le bon réflexe face à une information floue ?",
+      options: ["Acheter vite", "Augmenter la vigilance", "Ignorer le manque", "Comparer seulement le prix"],
+      correct: 1,
+      explanation: "Une donnée floue ou absente doit ralentir la décision, pas l’accélérer.",
+    },
+    {
+      q: "Quel nombre de critères non négociables est généralement suffisant ?",
+      options: ["1", "2 ou 3", "6 ou 7", "Le plus possible"],
+      correct: 1,
+      explanation: "Deux ou trois critères forts cadrent bien l’achat sans rigidifier inutilement la comparaison.",
+    },
+    {
+      q: "Pourquoi faut-il éviter de comparer trop de références en même temps ?",
+      options: ["Parce que c’est interdit", "Parce que le bruit augmente", "Parce que le score baisse", "Parce que Mimo ne suit pas"],
+      correct: 1,
+      explanation: "Au-delà de 2 ou 3 références proches, la comparaison perd en lisibilité et les compromis deviennent moins clairs.",
+    },
+    {
+      q: "Une promo suffit-elle à prouver qu’une offre est intéressante ?",
+      options: ["Oui", "Non"],
+      correct: 1,
+      explanation: "Une promo attire l’attention, mais elle ne prouve ni la pertinence ni la qualité globale de l’offre.",
+    },
+    {
+      q: "Quel est le meilleur usage d’un projet MAREF ?",
+      options: ["Stocker des liens", "Structurer une décision", "Afficher des badges", "Remplacer la comparaison"],
+      correct: 1,
+      explanation: "Le projet sert à cadrer un objectif, un budget, une famille et une short-list cohérente.",
+    },
+    {
+      q: "Quand une fiche est très riche en marketing mais pauvre en données, il faut :",
+      options: ["Faire confiance au marketing", "Considérer cela comme un signal de risque", "Acheter avant la rupture", "L’ajouter en favoris sans réfléchir"],
+      correct: 1,
+      explanation: "Une belle mise en scène ne remplace jamais une information fiable et exploitable.",
+    },
+    {
+      q: "Le meilleur choix est toujours le moins cher.",
+      options: ["Vrai", "Faux"],
+      correct: 1,
+      explanation: "Le meilleur choix dépend du besoin, du risque accepté, du budget, du contexte et de la durée d’usage.",
+    },
+    {
+      q: "Quel est le rôle principal de Mimo ?",
+      options: ["Faire du marketing", "Rendre la décision plus intelligible", "Remplacer toutes les données", "Choisir à votre place sans contexte"],
+      correct: 1,
+      explanation: "Mimo aide à interpréter, cadrer, comparer et signaler les limites de l’information disponible.",
+    },
+    {
+      q: "Quel est le bon signe d’une décision solide ?",
+      options: ["Elle est impulsive", "Elle peut s’expliquer simplement", "Elle suit la tendance", "Elle ignore les compromis"],
+      correct: 1,
+      explanation: "Une bonne décision peut être expliquée clairement : pourquoi cette option, pour quel usage, avec quels compromis.",
+    },
+  ];
+}
+
+function getLessonDeepening(categoryId: string) {
+  if (categoryId === "choisir") {
+    return `Dans la pratique, cela veut dire qu'il faut toujours partir de votre usage réel, de vos contraintes d'espace, de votre fréquence d'utilisation et de votre horizon de conservation avant de laisser le marketing orienter la décision. Une bonne méthode de choix réduit les regrets après achat, car elle transforme des spécifications abstraites en conséquences très concrètes dans le quotidien.`;
+  }
+
+  if (categoryId === "offre") {
+    return `Le bon réflexe consiste à relier chaque élément de l'offre à un niveau de risque ou de confort : clarté de la garantie, sérieux de l'enseigne, lisibilité des conditions et fiabilité des informations techniques. Plus une fiche ou un marchand restent flous, plus il faut ralentir et exiger des signaux vérifiables avant d'avancer.`;
+  }
+
+  return `L'objectif n'est pas d'accumuler des critères, mais d'identifier ceux qui changent vraiment l'arbitrage final. Une comparaison utile doit rendre visibles les compromis, permettre d'expliquer le choix retenu et montrer pourquoi une option devient meilleure qu'une autre dans un contexte réel.`;
+}
+
+function getLessonAction(lessonTitle: string) {
+  return `Après cette leçon, vous devez pouvoir reformuler simplement ce que "${lessonTitle}" change dans une vraie décision d'achat, puis vérifier si ces critères sont bien visibles dans MAREF avant de comparer ou de trancher.`;
+}
 
 export const GUIDE_MODULES: GuideModule[] = [
   {
     id: "choose-washing-machine",
     categoryId: "choisir",
     title: "Comment choisir son lave-linge",
-    desc: "Capacité, bruit, place, usage : les critères qui changent vraiment la décision.",
-    duration: "10 min",
+    desc: "Capacité, bruit, dimensions, confort et usage réel.",
+    duration: "12 min",
     difficulty: "Essentiel",
     icon: "🧺",
     content: [
-      {
-        title: "Commencer par le foyer et le rythme réel",
-        body:
-          "Le bon lave-linge dépend d'abord du foyer, du volume de linge et du rythme des cycles. Une petite machine peut être parfaite pour une personne seule, mais devenir vite limitante pour une famille. À l'inverse, surdimensionner l'appareil augmente souvent le prix, l'encombrement et parfois la consommation sans bénéfice réel.",
-      },
-      {
-        title: "Vérifier les contraintes physiques",
-        body:
-          "Avant même de comparer les références, il faut valider les dimensions, l'ouverture, l'accès, le passage dans le logement et le niveau sonore acceptable. Beaucoup de mauvais achats viennent d'un produit techniquement bon mais mal adapté à la pièce ou au mode de vie.",
-      },
-      {
-        title: "Lire les critères vraiment utiles",
-        body:
-          "Les critères qui font la différence sont surtout la capacité, le bruit, la qualité d'essorage, la lisibilité des programmes et la cohérence générale de l'offre. Le marketing met souvent en avant des fonctions secondaires alors que la vraie vie se joue sur le confort au quotidien.",
-      },
-      {
-        title: "Arbitrer prix, confort et durée",
-        body:
-          "Le bon arbitrage ne consiste pas à acheter le moins cher. Il consiste à trouver le point d'équilibre entre budget, usage et horizon de conservation. Si vous comptez garder votre appareil plusieurs années, la qualité d'information, la garantie et la sensation de robustesse deviennent bien plus importantes.",
-      },
+      { title: "Commencer par le foyer", body: "Le volume de linge, la fréquence des cycles et la composition du foyer sont les premiers critères. Une capacité mal calibrée crée vite de la frustration ou du surcoût inutile." },
+      { title: "Valider les contraintes physiques", body: "Dimensions, profondeur, ouverture de porte, accès à la pièce et niveau sonore doivent être vérifiés avant toute comparaison plus fine." },
+      { title: "Lire les critères utiles", body: "Capacité, essorage, bruit, lisibilité des programmes, qualité perçue et garantie ont plus d’impact réel que beaucoup de promesses marketing." },
+      { title: "Arbitrer correctement", body: "Le bon choix est celui qui reste cohérent avec votre usage sur plusieurs années, pas forcément celui qui gagne la guerre du prix affiché." },
     ],
   },
   {
     id: "choose-dryer",
     categoryId: "choisir",
     title: "Comment choisir son sèche-linge",
-    desc: "Technologie, bruit, capacité et temps de cycle : les vrais points de décision.",
-    duration: "9 min",
+    desc: "Technologie, bruit, temps de cycle et cohérence avec le lave-linge.",
+    duration: "10 min",
     difficulty: "Essentiel",
     icon: "🌬️",
     content: [
-      {
-        title: "Commencer par l'usage",
-        body:
-          "Le besoin n'est pas le même selon qu'on sèche ponctuellement ou plusieurs fois par semaine. La technologie n'a de sens qu'en lien avec le rythme réel, le type de linge, l'espace disponible et la tolérance au bruit.",
-      },
-      {
-        title: "Regarder la technologie avec recul",
-        body:
-          "Pompe à chaleur, condensation classique ou autres variantes : l'essentiel est de comprendre l'impact concret sur le temps de cycle, le confort, le coût global et l'entretien. Une promesse technique isolée ne suffit pas à qualifier une bonne offre.",
-      },
-      {
-        title: "Lire la capacité et le temps réel",
-        body:
-          "La capacité affichée doit être cohérente avec le lave-linge déjà présent ou le projet d'équipement. Le temps de séchage et la régularité d'usage comptent autant que l'étiquette du produit.",
-      },
-      {
-        title: "Éviter les faux bons plans",
-        body:
-          "Un sèche-linge à prix agressif peut être moins pertinent s'il est peu lisible, mal garanti ou peu cohérent avec l'usage visé. Dans MAREF, on compare d'abord la pertinence puis les compromis, pas seulement l'étiquette de prix.",
-      },
+      { title: "Partir du rythme réel", body: "Le bon sèche-linge dépend du nombre de cycles hebdomadaires, du type de linge, du temps disponible et de votre tolérance au bruit." },
+      { title: "Relier la technologie à l’usage", body: "La technologie n’a de sens que si elle améliore vraiment le confort, le coût global ou la simplicité d’entretien dans votre quotidien." },
+      { title: "Vérifier la capacité", body: "La capacité doit rester cohérente avec le lave-linge actuel ou envisagé, sinon l’usage devient vite déséquilibré." },
+      { title: "Éviter le faux bon plan", body: "Une offre agressive n’est pas forcément une bonne décision si elle est mal garantie, mal documentée ou peu cohérente avec votre usage." },
     ],
   },
   {
-    id: "choose-phone-pc",
+    id: "choose-refrigerator",
+    categoryId: "choisir",
+    title: "Comment choisir son réfrigérateur",
+    desc: "Volume utile, format, bruit, froid ventilé et contraintes d’espace.",
+    duration: "11 min",
+    difficulty: "Essentiel",
+    icon: "🧊",
+    content: [
+      { title: "Choisir le bon format", body: "Top, 1 porte, combiné, multi-door ou américain : le bon format dépend de la place, du foyer et des habitudes de courses." },
+      { title: "Lire le volume utile", body: "Le volume doit être dimensionné selon l’usage réel et non selon une logique de suréquipement. Trop grand peut devenir un mauvais arbitrage." },
+      { title: "Regarder le bruit et l’intégration", body: "Le niveau sonore et l’intégration dans la cuisine ont un impact quotidien fort, surtout dans les logements compacts ou ouverts." },
+      { title: "Vérifier les vrais signaux", body: "Garantie, lisibilité des données, cohérence de l’offre et qualité perçue restent déterminants à côté des specs pures." },
+    ],
+  },
+  {
+    id: "choose-screen-device",
     categoryId: "choisir",
     title: "Comment choisir un téléphone, une tablette ou un PC",
-    desc: "Séparer les specs importantes du bruit marketing en téléphonie et informatique.",
-    duration: "12 min",
+    desc: "Traduire les spécifications en impact concret.",
+    duration: "14 min",
     difficulty: "Intermédiaire",
     icon: "💻",
     content: [
-      {
-        title: "Partir des usages dominants",
-        body:
-          "Pour un smartphone, une tablette ou un PC, il faut commencer par les usages dominants : autonomie, photo, fluidité, bureautique, étude, création, jeu ou simplicité. Une fiche technique impressionnante ne vaut rien si elle ne sert pas le besoin principal.",
-      },
-      {
-        title: "Identifier les composants structurants",
-        body:
-          "Il faut distinguer les composants décisifs des détails décoratifs. Sur un PC, mémoire vive, stockage, écran et autonomie sont souvent plus utiles à lire que certaines promesses de performance théorique. Sur un téléphone, autonomie, stockage, suivi logiciel et photo comptent souvent davantage que la seule fiche brute.",
-      },
-      {
-        title: "Lire le prix avec l'horizon d'usage",
-        body:
-          "Un appareil un peu plus cher peut devenir meilleur s'il est gardé plus longtemps, mieux supporté ou mieux adapté à l'usage. MAREF doit vous aider à voir si la valeur ajoutée est réelle ou purement symbolique.",
-      },
-      {
-        title: "Ne pas surpayer l'écosystème sans raison",
-        body:
-          "L'écosystème a de la valeur quand il simplifie réellement la vie : synchronisation, accessoires, support, continuité d'usage. S'il n'apporte rien de concret, il devient juste une prime de marque.",
-      },
+      { title: "Commencer par les usages dominants", body: "Autonomie, bureautique, photo, jeu, création, mobilité ou confort visuel : le besoin doit précéder la fiche technique." },
+      { title: "Séparer les specs structurantes", body: "Mémoire, stockage, écran, autonomie et suivi logiciel comptent souvent plus que des promesses spectaculaires mal contextualisées." },
+      { title: "Lire le prix avec l’horizon", body: "Un appareil un peu plus cher peut devenir meilleur s’il reste confortable plus longtemps et s’il est mieux supporté." },
+      { title: "Éviter la prime de marque automatique", body: "L’écosystème a de la valeur s’il apporte un vrai confort. Sinon, il peut surtout augmenter la facture." },
     ],
   },
   {
-    id: "understand-price-and-market",
+    id: "understand-price-market",
     categoryId: "offre",
-    title: "Comprendre les prix, le marché et les faux repères",
-    desc: "Lire une offre au-delà du prix barré et du discours commercial.",
-    duration: "11 min",
+    title: "Comprendre les prix et le marché",
+    desc: "Lire une offre au-delà du prix barré ou du badge promo.",
+    duration: "10 min",
     difficulty: "Essentiel",
     icon: "💶",
     content: [
-      {
-        title: "Le prix affiché ne suffit jamais",
-        body:
-          "Un prix seul ne dit ni si l'offre est juste, ni si le produit est adapté, ni si le cadre de vente est propre. Une bonne décision commence par la lecture conjointe du besoin, de la qualité de l'offre et du niveau de risque accepté.",
-      },
-      {
-        title: "Pourquoi les prix barrés trompent souvent",
-        body:
-          "Le prix barré attire l'œil, mais il ne démontre pas une bonne affaire. Il faut toujours se demander si le produit aurait mérité votre attention sans l'effet promo. Si la réponse est non, la promotion ne doit pas piloter la décision.",
-      },
-      {
-        title: "Le marché ne se lit pas en un clic",
-        body:
-          "Le marché est fragmenté : qualité de fiche, marchand, disponibilité, image de marque et densité d'information changent beaucoup la perception. MAREF aide à remettre tout cela dans une lecture commune pour éviter les comparaisons bancales.",
-      },
-      {
-        title: "Quand le manque d'information est un signal",
-        body:
-          "Une offre floue sur les specs, la garantie, la livraison ou les conditions de retour doit immédiatement augmenter la vigilance. L'absence d'information n'est pas neutre : c'est déjà un risque à lire.",
-      },
+      { title: "Le prix seul ne suffit pas", body: "Un prix n’explique ni la pertinence du produit, ni le risque marchand, ni la qualité globale de la décision." },
+      { title: "Le prix barré n’est pas une preuve", body: "Une promo doit être replacée dans un contexte : besoin, cadre marchand, niveau d’information et qualité réelle de l’offre." },
+      { title: "Le marché est fragmenté", body: "Deux offres proches en prix peuvent être très différentes sur la livraison, la garantie, la lisibilité ou la confiance marchande." },
+      { title: "Le manque d’information est déjà un signal", body: "Une fiche floue doit faire monter la vigilance, surtout sur les dimensions, la garantie, la disponibilité et les conditions de retour." },
     ],
   },
   {
     id: "understand-product-sheet",
     categoryId: "offre",
-    title: "Comprendre une fiche produit sans se faire influencer",
-    desc: "Traduire les données en impact concret plutôt qu'en impression marketing.",
-    duration: "10 min",
+    title: "Comprendre une fiche produit",
+    desc: "Faire parler une fiche technique sans se laisser entraîner par le marketing.",
+    duration: "11 min",
     difficulty: "Essentiel",
     icon: "🧾",
     content: [
-      {
-        title: "Le nom commercial n'est pas la vérité",
-        body:
-          "Les intitulés produit sont faits pour séduire, pas pour vous aider à arbitrer. Ce qui compte, ce sont les données qui changent l'usage réel : dimensions, capacité, autonomie, connectique, garantie, bruit, mémoire, etc.",
-      },
-      {
-        title: "Traduire la spec en impact",
-        body:
-          "Une bonne lecture consiste à transformer une donnée en conséquence concrète. Un niveau sonore élevé signifie un usage plus pénible. Une faible mémoire signifie une durée de confort plus courte. Une grande capacité signifie un meilleur ajustement à certains foyers.",
-      },
-      {
-        title: "Repérer les signaux faibles",
-        body:
-          "Il faut regarder la cohérence de la fiche dans son ensemble : richesse des données, lisibilité marchande, qualité du cadre de vente, logique du prix, stabilité perçue. Une fiche complète inspire une autre confiance qu'une fiche approximative.",
-      },
-      {
-        title: "Utiliser Mimo correctement",
-        body:
-          "Mimo ne remplace pas votre jugement. Il sert à reformuler ce que signifient les données, à signaler les limites, à proposer un angle de comparaison et à éviter les raccourcis trop rapides.",
-      },
+      { title: "Le nom commercial ne suffit pas", body: "Ce qui compte, ce sont les données qui changent l’usage : dimensions, autonomie, bruit, mémoire, capacité, garantie ou connectique." },
+      { title: "Transformer une spec en impact", body: "Une donnée utile doit être traduite en conséquence réelle : confort, place, durée, risque, simplicité ou coût sur la durée." },
+      { title: "Repérer les signaux faibles", body: "Une fiche complète, stable et claire inspire une autre confiance qu’une fiche approximative, même si le prix paraît séduisant." },
+      { title: "Utiliser Mimo au bon niveau", body: "Mimo sert à éclairer la lecture, à nommer les manques et à reformuler les compromis, pas à maquiller les zones grises." },
     ],
   },
   {
-    id: "compare-and-decide",
+    id: "understand-merchant-risk",
+    categoryId: "offre",
+    title: "Comprendre l’enseigne et le risque marchand",
+    desc: "Lire le vendeur, la garantie, la livraison et le retour comme de vrais critères.",
+    duration: "9 min",
+    difficulty: "Intermédiaire",
+    icon: "🏬",
+    content: [
+      { title: "Un achat ne se limite pas au produit", body: "Le vendeur, la garantie, la clarté du retour et la qualité de la livraison influencent directement la sécurité de votre achat." },
+      { title: "Ce qu’il faut vérifier", body: "Conditions de retour, visibilité du SAV, clarté de la disponibilité, qualité de l’information et cohérence du discours commercial." },
+      { title: "Quand ralentir", body: "Si l’enseigne est floue, si les conditions sont peu lisibles ou si les promesses sont trop agressives, il faut ralentir." },
+      { title: "Comment MAREF lit ce risque", body: "L’axe Assurance sert justement à objectiver cette confiance marchande au lieu de la laisser au ressenti." },
+    ],
+  },
+  {
+    id: "compare-shortlist",
     categoryId: "comparaison",
-    title: "Comparer 2 ou 3 références sans se perdre",
-    desc: "La bonne méthode pour garder une comparaison lisible et vraiment utile.",
+    title: "Comparer 2 ou 3 offres sans se perdre",
+    desc: "Construire une short-list claire et utile.",
     duration: "12 min",
     difficulty: "Intermédiaire",
     icon: "⚖️",
     content: [
-      {
-        title: "Pourquoi 3 références maximum",
-        body:
-          "Au-delà de trois produits comparables dans une même sous-catégorie, la décision devient plus bruyante. Le cerveau retient moins bien les compromis, et les écarts utiles se diluent. Trois références bien choisies suffisent presque toujours.",
-      },
-      {
-        title: "Lire les axes avant les specs",
-        body:
-          "Le premier niveau de comparaison doit être PEFAS : pertinence, économie, fluidité, assurance, stabilité. Ensuite seulement viennent les données techniques qui expliquent les écarts. Ce séquencement évite de se perdre dans le détail avant de comprendre la logique globale.",
-      },
-      {
-        title: "Comparer les vraies données utiles",
-        body:
-          "Une comparaison propre ne doit pas juxtaposer des dizaines de lignes inutiles. Elle doit isoler les données qui influencent la décision : capacité, bruit, autonomie, dimensions, mémoire, technologie, garantie, cadre marchand, etc.",
-      },
-      {
-        title: "Savoir trancher",
-        body:
-          "Une bonne décision doit pouvoir s'expliquer simplement : pourquoi cette offre l'emporte, sur quels axes, avec quels compromis et pour quel contexte. Si vous ne pouvez pas l'expliquer, il manque encore un morceau du raisonnement.",
-      },
-    ],
-  },
-];
-
-export const GUIDE_QUIZZES: GuideQuiz[] = [
-  {
-    id: "quiz-choisir",
-    categoryId: "choisir",
-    title: "Quiz : bien choisir son appareil",
-    description: "10 questions pour vérifier si vous savez partir du bon besoin.",
-    questions: [
-      {
-        q: "Avant toute comparaison, quel est le meilleur point de départ ?",
-        options: ["Le produit le plus populaire", "Le besoin réel et les contraintes", "Le plus gros rabais", "La marque la plus visible"],
-        correct: 1,
-        explanation: "Une comparaison utile commence toujours par un besoin clair et des contraintes réelles.",
-      },
-      {
-        q: "Pour un lave-linge, quel critère est généralement structurant ?",
-        options: ["Le slogan commercial", "La capacité adaptée au foyer", "La couleur de façade", "Le nombre de boutons"],
-        correct: 1,
-        explanation: "La capacité doit coller au foyer et au rythme de lavage.",
-      },
-      {
-        q: "Pourquoi faut-il vérifier les dimensions avant de comparer davantage ?",
-        options: ["Parce que c est obligatoire légalement", "Parce qu un bon produit mal dimensionné devient un mauvais achat", "Parce que cela augmente toujours le score", "Parce que le prix dépend uniquement de cela"],
-        correct: 1,
-        explanation: "Un produit inadapté au logement ou à l'installation perd immédiatement en pertinence.",
-      },
-      {
-        q: "Quel est le bon nombre de critères non négociables au départ ?",
-        options: ["1", "2 ou 3", "7 ou 8", "Le plus possible"],
-        correct: 1,
-        explanation: "Deux ou trois critères forts suffisent pour cadrer la décision sans la rigidifier.",
-      },
-      {
-        q: "Pour un smartphone, quel trio revient souvent dans la vraie décision ?",
-        options: ["Packaging, couleur, hype", "Autonomie, fluidité, stockage", "Nombre de publicités", "Volume des ventes"],
-        correct: 1,
-        explanation: "Ces critères ont souvent plus d'impact quotidien que des promesses marketing plus spectaculaires.",
-      },
-      {
-        q: "Un sèche-linge intéressant se juge uniquement sur sa technologie.",
-        options: ["Vrai", "Faux"],
-        correct: 1,
-        explanation: "La technologie doit être lue avec le bruit, la capacité, l'entretien et l'usage réel.",
-      },
-      {
-        q: "Quel budget est le plus utile pour décider ?",
-        options: ["Un chiffre fixe inflexible", "Une fourchette avec zone cible", "Le budget moyen du marché", "Le plus petit prix possible"],
-        correct: 1,
-        explanation: "Une fourchette permet de mieux juger la valeur réelle d'un éventuel surcoût.",
-      },
-      {
-        q: "Quel est le bon réflexe quand l'offre paraît parfaite mais mal documentée ?",
-        options: ["Acheter vite", "Augmenter la vigilance", "Ignorer les manques", "Se fier aux photos"],
-        correct: 1,
-        explanation: "Un manque d'information est déjà un signal de risque ou d'incertitude.",
-      },
-      {
-        q: "Le meilleur produit est toujours le plus cher.",
-        options: ["Vrai", "Faux"],
-        correct: 1,
-        explanation: "Le meilleur choix dépend du contexte, du budget, de l'usage et des compromis acceptés.",
-      },
-      {
-        q: "À quoi sert un projet MAREF bien rédigé ?",
-        options: ["À stocker des liens", "À cadrer proprement l'intention d'achat", "À afficher des badges", "À créer un historique inutile"],
-        correct: 1,
-        explanation: "Le projet sert de cadre décisionnel pour rendre l'exploration, Mimo et la comparaison plus cohérents.",
-      },
+      { title: "Pourquoi 3 offres maximum", body: "Au-delà de trois offres comparables, la décision devient plus bruyante et les écarts utiles se lisent moins bien." },
+      { title: "Lire d’abord les axes", body: "La première lecture doit porter sur PEFAS, puis sur les données techniques qui expliquent les écarts observés." },
+      { title: "Comparer les bonnes données", body: "Seules les données qui changent vraiment la décision doivent rester visibles : dimensions, bruit, mémoire, autonomie, garantie, technologie ou cadre marchand." },
+      { title: "Savoir trancher", body: "Une bonne décision doit pouvoir se résumer en une phrase claire : pourquoi cette offre l’emporte, avec quels compromis." },
     ],
   },
   {
-    id: "quiz-offre",
-    categoryId: "offre",
-    title: "Quiz : comprendre une offre",
-    description: "10 questions pour mieux lire les prix, les fiches et les marchands.",
-    questions: [
-      {
-        q: "Que démontre un prix barré à lui seul ?",
-        options: ["Une vraie bonne affaire", "Pas grand-chose sans contexte", "Une grande durabilité", "Une livraison premium"],
-        correct: 1,
-        explanation: "Le prix barré attire l'attention mais ne prouve ni pertinence ni qualité réelle de l'offre.",
-      },
-      {
-        q: "Une fiche produit riche sert surtout à :",
-        options: ["Créer du désir uniquement", "Rendre la décision plus lisible", "Masquer les limites", "Justifier un prix élevé"],
-        correct: 1,
-        explanation: "Une fiche bien renseignée aide à relier les données au besoin réel.",
-      },
-      {
-        q: "Quand une garantie est floue, quel axe est directement concerné ?",
-        options: ["Pertinence", "Assurance", "Popularité", "Design"],
-        correct: 1,
-        explanation: "L'axe Assurance lit la confiance dans le cadre d'achat, la garantie et la fiabilité marchande.",
-      },
-      {
-        q: "Les photos d'un produit remplacent-elles les données techniques ?",
-        options: ["Oui", "Non"],
-        correct: 1,
-        explanation: "Les photos séduisent, les données structurent la décision.",
-      },
-      {
-        q: "Pourquoi faut-il lire le marchand et pas seulement le produit ?",
-        options: ["Parce que le marchand change la couleur du produit", "Parce que retour, SAV et lisibilité modifient le risque réel", "Parce que cela améliore automatiquement la note", "Parce que tous les marchands sont identiques"],
-        correct: 1,
-        explanation: "Le cadre marchand influence directement la qualité globale de l'achat.",
-      },
-      {
-        q: "Que faut-il faire si une information importante manque ?",
-        options: ["Supposer qu elle est favorable", "Ralentir la décision", "Acheter avant rupture", "Comparer seulement le prix"],
-        correct: 1,
-        explanation: "L'absence d'information doit augmenter la vigilance, pas la réduire.",
-      },
-      {
-        q: "Le marché se lit en comparant seulement les prix.",
-        options: ["Vrai", "Faux"],
-        correct: 1,
-        explanation: "Le marché se lit aussi via la densité d'information, les marchands, la cohérence de l'offre et le niveau de risque.",
-      },
-      {
-        q: "À quoi sert Mimo sur une fiche offre ?",
-        options: ["À faire de la publicité", "À traduire les données en impact concret", "À masquer les manques", "À imposer une décision"],
-        correct: 1,
-        explanation: "Mimo sert à reformuler, signaler les limites et aider à lire plus clairement.",
-      },
-      {
-        q: "Une offre peut-elle être peu chère mais faible en économie ?",
-        options: ["Oui", "Non"],
-        correct: 0,
-        explanation: "Oui, si la valeur réelle rendue ou la durabilité perçue sont trop faibles.",
-      },
-      {
-        q: "Quel est le bon réflexe face à une offre mal documentée mais séduisante ?",
-        options: ["Se fier à l'intuition", "Chercher à objectiver les manques", "Faire confiance à la promo", "Passer directement en favoris puis acheter"],
-        correct: 1,
-        explanation: "Une bonne décision consiste à objectiver les limites avant d'aller plus loin.",
-      },
-    ],
-  },
-  {
-    id: "quiz-comparaison",
+    id: "read-score-pefas",
     categoryId: "comparaison",
-    title: "Quiz : comparer et décider",
-    description: "10 questions pour savoir construire une short-list et arbitrer proprement.",
-    questions: [
-      {
-        q: "Combien de produits faut-il idéalement comparer dans la même sous-catégorie ?",
-        options: ["1", "2 ou 3", "6", "Le plus possible"],
-        correct: 1,
-        explanation: "Deux ou trois références suffisent pour garder une comparaison lisible et exploitable.",
-      },
-      {
-        q: "Quel est le bon ordre de lecture ?",
-        options: ["Design, promo, packaging", "Axes, données techniques utiles, prix, risque", "Réseaux sociaux, avis, logo", "Prix puis tout le reste"],
-        correct: 1,
-        explanation: "Lire d'abord la logique de décision avant de plonger dans le détail technique rend l'arbitrage plus propre.",
-      },
-      {
-        q: "Pourquoi limiter les comparaisons à la même sous-catégorie ?",
-        options: ["Pour compliquer le produit", "Pour éviter des arbitrages incohérents", "Parce que la base l'impose", "Parce que tous les produits sont identiques"],
-        correct: 1,
-        explanation: "Comparer des produits trop différents crée du bruit et fausse la décision.",
-      },
-      {
-        q: "Le meilleur produit est :",
-        options: ["Toujours le plus connu", "Toujours le moins cher", "Celui qui colle le mieux au contexte", "Toujours celui qui gagne 3 axes"],
-        correct: 2,
-        explanation: "La meilleure option reste contextuelle, même quand un produit domine sur plusieurs points.",
-      },
-      {
-        q: "À quoi servent les axes PEFAS dans une comparaison ?",
-        options: ["À faire joli", "À expliquer les compromis et les forces", "À remplacer les specs", "À supprimer la réflexion"],
-        correct: 1,
-        explanation: "Les axes rendent visibles les raisons d'une recommandation et ses limites.",
-      },
-      {
-        q: "Les données techniques doivent être comparées comment ?",
-        options: ["Toutes sans distinction", "En isolant celles qui changent la décision", "En lisant seulement la plus longue fiche", "En se fiant au marchand préféré"],
-        correct: 1,
-        explanation: "Une bonne comparaison technique met en avant les specs qui influencent réellement l'usage et le risque.",
-      },
-      {
-        q: "Quand deux produits sont proches, quel signal peut départager ?",
-        options: ["Le slogan", "La lisibilité du cadre marchand", "La couleur du bouton d'achat", "Le volume de publicité"],
-        correct: 1,
-        explanation: "Le cadre marchand, la garantie et la qualité des données deviennent très utiles pour départager.",
-      },
-      {
-        q: "Une recommandation difficile à expliquer signifie souvent :",
-        options: ["Qu elle est encore immature", "Qu elle est meilleure", "Qu il faut acheter vite", "Que le score est inutile"],
-        correct: 0,
-        explanation: "Une bonne recommandation doit pouvoir être expliquée clairement et simplement.",
-      },
-      {
-        q: "À quoi sert un comparateur par famille dans MAREF ?",
-        options: ["À mélanger tous les achats", "À garder des arbitrages propres et comparables", "À dupliquer les offres", "À afficher plus de texte"],
-        correct: 1,
-        explanation: "Le comparateur par famille évite les mélanges absurdes et garde chaque décision lisible.",
-      },
-      {
-        q: "Quel est le vrai but d'une comparaison MAREF ?",
-        options: ["Acheter le plus vite possible", "Arbitrer avec moins d'incertitude", "Montrer plus de chiffres", "Faire comme tout le monde"],
-        correct: 1,
-        explanation: "L'objectif est de réduire l'incertitude et d'améliorer la qualité de décision.",
-      },
+    title: "Comprendre le score MAREF et PEFAS",
+    desc: "Lire la note globale sans perdre les nuances.",
+    duration: "10 min",
+    difficulty: "Intermédiaire",
+    icon: "📊",
+    content: [
+      { title: "Le score n’est pas une vérité absolue", body: "Le score résume une lecture, mais il ne doit jamais écraser le contexte, les objectifs ni les contraintes réelles." },
+      { title: "PEFAS avant la note finale", body: "La note globale est utile si vous comprenez les axes qui la composent : pertinence, économie, fluidité, assurance, stabilité." },
+      { title: "Une bonne note peut cacher un vrai compromis", body: "Une offre peut être forte globalement mais faible sur un axe qui compte beaucoup pour vous. C’est là que la lecture détaillée devient utile." },
+      { title: "Le projet change la lecture", body: "Un score contextualisé dans un projet peut être plus utile qu’une note globale isolée, car il tient compte du besoin réel." },
     ],
   },
-];
+  {
+    id: "decide-with-confidence",
+    categoryId: "comparaison",
+    title: "Décider avec confiance",
+    desc: "Transformer une short-list en décision assumée.",
+    duration: "8 min",
+    difficulty: "Intermédiaire",
+    icon: "✅",
+    content: [
+      { title: "Savoir quand la décision est mûre", body: "Une décision devient mûre quand les critères clés sont clairs, les offres lisibles et les compromis compris." },
+      { title: "Ne pas chercher la perfection", body: "Le bon achat n’est pas parfait. C’est celui qui est le plus cohérent avec le besoin, le budget et le niveau de risque accepté." },
+      { title: "Assumer le compromis", body: "Choisir, c’est accepter qu’une option perde sur certains points pour gagner sur ceux qui comptent vraiment." },
+      { title: "Faire de MAREF un réflexe", body: "Le vrai réflexe utile, c’est de cadrer, comparer, vérifier, puis trancher. Plus vous répétez ce schéma, plus la décision devient fluide." },
+    ],
+  },
+].map((module) => ({
+  ...module,
+  content: module.content.map((lesson) => ({
+    ...lesson,
+    body: `${lesson.body} ${getLessonDeepening(module.categoryId)} ${getLessonAction(lesson.title)}`,
+  })),
+}));
+
+export const GUIDE_QUIZZES: GuideQuiz[] = GUIDE_MODULES.map((module) => ({
+  id: `quiz-${module.id}`,
+  categoryId: module.categoryId,
+  moduleId: module.id,
+  title: `Quiz : ${module.title}`,
+  description: `10 questions pour vérifier si vous maîtrisez les fondamentaux du module « ${module.title} ».`,
+  questions: createQuestions(module.title, module.desc),
+}));

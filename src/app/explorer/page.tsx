@@ -2,21 +2,53 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { EmptyState, LoadingSkeleton, ScoreCircle, StatusBadge, Toast } from "@/components/shared/Score";
+import { EmptyState, LoadingSkeleton, Toast } from "@/components/shared/Score";
 import { CATEGORIES, getCategoryIcon } from "@/lib/categories";
 import type { Offer } from "@/lib/data";
-import { addOfferToCompareGroups } from "@/features/compare/store";
-import { addOfferToProject, getProjectsWithOffers, type Project } from "@/features/projects/api";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import { recordSearchSignal } from "@/lib/core/userSignals";
-import { getOfferDisplayScore, rankOffersByScore, toBaseOffer } from "@/lib/score/engine";
+import { rankOffersByScore, toBaseOffer } from "@/lib/score/engine";
 import { getOffers } from "@/lib/queries";
 
+type ProductCard = {
+  key: string;
+  representative: Offer;
+  offers: Offer[];
+  merchants: string[];
+};
+
+function getProductGroupKey(offer: Offer) {
+  return [offer.category, offer.subcategory, offer.brand, offer.model || offer.product].join("::");
+}
+
+function groupOffersIntoProducts(offers: Offer[]) {
+  const groups = offers.reduce<Record<string, ProductCard>>((accumulator, offer) => {
+    const key = getProductGroupKey(offer);
+    if (!accumulator[key]) {
+      accumulator[key] = {
+        key,
+        representative: offer,
+        offers: [],
+        merchants: [],
+      };
+    }
+
+    accumulator[key].offers.push(offer);
+    accumulator[key].merchants = Array.from(new Set([...accumulator[key].merchants, offer.merchant]));
+
+    if (offer.price < accumulator[key].representative.price) {
+      accumulator[key].representative = offer;
+    }
+
+    return accumulator;
+  }, {});
+
+  return Object.values(groups).sort((a, b) => a.representative.product.localeCompare(b.representative.product));
+}
+
 export default function ExplorerPage() {
-  const { user } = useAuth();
   const router = useRouter();
-  const { message, showMessage } = useTimedMessage();
+  const { message } = useTimedMessage();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
@@ -28,7 +60,6 @@ export default function ExplorerPage() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [allOffers, setAllOffers] = useState<Offer[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [bestBuyAvailable, setBestBuyAvailable] = useState(false);
 
@@ -60,13 +91,6 @@ export default function ExplorerPage() {
       setAllOffers(data);
     });
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    getProjectsWithOffers().then((data) => {
-      setProjects(data.projects);
-    });
-  }, [user]);
 
   useEffect(() => {
     if (!activeSubcategory && !search) {
@@ -149,8 +173,6 @@ export default function ExplorerPage() {
   const activeCat = CATEGORIES.find((category) => category.id === activeCategory);
   const merchants = [...new Set(allOffers.map((offer) => offer.merchant))];
   const brands = [...new Set(allOffers.map((offer) => offer.brand))];
-  const targetProjectId = projects[0]?.id || null;
-  const targetProject = projects.find((project) => project.id === targetProjectId) || null;
 
   const filteredOffers = useMemo(() => {
     return offers.filter((offer) => {
@@ -164,45 +186,7 @@ export default function ExplorerPage() {
     });
   }, [inStockOnly, offers, priceBand, selectedBrand, selectedMerchant]);
 
-  async function handleAddToProject(offerId: string) {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-
-    if (!targetProjectId) {
-      router.push("/projets");
-      return;
-    }
-
-    const result = await addOfferToProject(targetProjectId, offerId);
-
-    if (!result.success && result.reason === "exists") {
-      showMessage("Offre deja presente dans " + (targetProject?.name || "le projet"));
-      return;
-    }
-
-    if (result.success) {
-      showMessage("Ajoutee a " + (targetProject?.name || "votre projet"));
-      const data = await getProjectsWithOffers();
-      setProjects(data.projects);
-      return;
-    }
-
-    showMessage("Ajout impossible pour le moment");
-  }
-
-  function handleCompareOffer(offer: Offer) {
-    const result = addOfferToCompareGroups(offer);
-
-    if (result.status === "exists") {
-      showMessage("Cette offre est deja dans la comparaison " + result.family.label);
-    } else if (result.status === "full") {
-      showMessage("La comparaison " + result.family.label + " contient deja 3 offres");
-    } else {
-      showMessage("Ajoutee a la comparaison " + result.family.label);
-    }
-  }
+  const filteredProducts = useMemo(() => groupOffersIntoProducts(filteredOffers), [filteredOffers]);
 
   function getSubCount(subcategoryId: string) {
     return allOffers.filter((offer) => offer.subcategory === subcategoryId).length;
@@ -380,90 +364,50 @@ export default function ExplorerPage() {
 
           {loading ? (
             <LoadingSkeleton count={4} />
-          ) : filteredOffers.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <EmptyState icon="🔍" title="Aucun résultat" description="Essayez d élargir vos critères." action={() => { setSearch(""); setActiveSubcategory(null); }} actionLabel="Réinitialiser" />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
-              {filteredOffers.map((offer) => (
-                <div key={offer.id} onClick={() => router.push("/explorer/" + offer.id)} className="premium-card cursor-pointer rounded-[26px] p-4 transition-all group hover:translate-y-[-2px]">
+              {filteredProducts.map((product) => (
+                <div key={product.key} onClick={() => router.push("/explorer/" + product.representative.id)} className="premium-card cursor-pointer rounded-[26px] p-4 transition-all group hover:translate-y-[-2px]">
                   <div className="w-full h-24 rounded-[22px] bg-slate-100 flex items-center justify-center text-3xl mb-3 group-hover:bg-slate-200 transition-colors">
-                    {getCategoryIcon(offer.category)}
+                    {getCategoryIcon(product.representative.category)}
                   </div>
-                  <p className="text-[0.68rem] text-slate-400 font-bold uppercase tracking-[0.18em]">{offer.brand}</p>
-                  <p className="font-black text-sm truncate text-slate-950 group-hover:text-blue-950 transition-colors">{offer.product}</p>
-                  <p className="text-[0.68rem] text-slate-400 truncate">{offer.merchant}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="font-bold text-sm">{offer.price.toLocaleString("fr-FR")} EUR</span>
-                    <ScoreCircle score={getOfferDisplayScore(offer)} size="xs" />
-                  </div>
-                  <div className="mt-1.5"><StatusBadge score={getOfferDisplayScore(offer)} /></div>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleAddToProject(offer.id);
-                      }}
-                      className="text-[0.7rem] font-semibold bg-slate-100 text-blue-950 px-2.5 py-2 rounded-lg hover:bg-slate-200 transition-colors"
-                    >
-                      {targetProject ? "Projet" : user ? "Projet" : "Connexion"}
-                    </button>
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleCompareOffer(offer);
-                      }}
-                      className="text-[0.7rem] font-semibold bg-white border border-gray-200 text-gray-700 px-2.5 py-2 rounded-lg hover:border-slate-400 transition-colors"
-                    >
-                      Comparer
-                    </button>
+                  <p className="text-[0.68rem] text-slate-400 font-bold uppercase tracking-[0.18em]">{product.representative.brand}</p>
+                  <p className="font-black text-sm truncate text-slate-950 group-hover:text-blue-950 transition-colors">{product.representative.product}</p>
+                  <p className="text-[0.68rem] text-slate-400 truncate">{product.merchants.length} offre{product.merchants.length > 1 ? "s" : ""} marchande{product.merchants.length > 1 ? "s" : ""}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {product.merchants.slice(0, 3).map((merchant) => (
+                      <span key={merchant} className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] text-slate-600">
+                        {merchant}
+                      </span>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredOffers.map((offer, index) => (
-                <div key={offer.id} onClick={() => router.push("/explorer/" + offer.id)} className="premium-card flex gap-4 rounded-[28px] p-4 transition-all cursor-pointer group hover:translate-y-[-2px]">
+              {filteredProducts.map((product, index) => (
+                <div key={product.key} onClick={() => router.push("/explorer/" + product.representative.id)} className="premium-card flex gap-4 rounded-[28px] p-4 transition-all cursor-pointer group hover:translate-y-[-2px]">
                   <div className="relative w-16 h-16 rounded-[22px] bg-slate-100 flex items-center justify-center text-2xl shrink-0 group-hover:bg-slate-200 transition-colors">
-                    {getCategoryIcon(offer.category)}
+                    {getCategoryIcon(product.representative.category)}
                     {index < 3 && sort === "score" && <span className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-blue-950 text-white text-[0.6rem] font-bold rounded-full flex items-center justify-center shadow-sm">{index + 1}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-[0.18em]">{offer.brand}</p>
-                        <p className="font-black text-base truncate text-slate-950 group-hover:text-blue-950 transition-colors">{offer.product}</p>
+                        <p className="text-[0.7rem] text-slate-400 font-bold uppercase tracking-[0.18em]">{product.representative.brand}</p>
+                        <p className="font-black text-base truncate text-slate-950 group-hover:text-blue-950 transition-colors">{product.representative.product}</p>
                       </div>
-                      <ScoreCircle score={getOfferDisplayScore(offer)} size="sm" />
                     </div>
-                    <p className="text-sm text-slate-500">{offer.merchant} - {offer.availability}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <div>
-                        <span className="font-bold">{offer.price.toLocaleString("fr-FR")} EUR</span>
-                        {offer.barredPrice && <span className="text-xs text-gray-400 line-through ml-1.5">{offer.barredPrice.toLocaleString("fr-FR")} EUR</span>}
-                      </div>
-                      <StatusBadge score={getOfferDisplayScore(offer)} />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{offer.mimoShort}</p>
-                    <div className="flex gap-2 mt-3 flex-wrap">
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleAddToProject(offer.id);
-                        }}
-                        className="text-[0.7rem] font-semibold bg-slate-100 text-blue-950 px-2.5 py-1.5 rounded-lg hover:bg-slate-200 transition-colors"
-                      >
-                        {targetProject ? "Ajouter au projet" : user ? "Creer un projet" : "Se connecter"}
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleCompareOffer(offer);
-                        }}
-                        className="text-[0.7rem] font-semibold bg-white border border-gray-200 text-gray-700 px-2.5 py-1.5 rounded-lg hover:border-slate-400 transition-colors"
-                      >
-                        Comparer
-                      </button>
+                    <p className="text-sm text-slate-500">{product.merchants.length} offre{product.merchants.length > 1 ? "s" : ""} référencée{product.merchants.length > 1 ? "s" : ""}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {product.merchants.slice(0, 4).map((merchant) => (
+                        <span key={merchant} className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] text-slate-600">
+                          {merchant}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>

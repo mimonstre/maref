@@ -1,53 +1,56 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   AxisBar,
   DataTruthBadge,
   EmptyState,
-  IncompleteDataWarning,
   LoadingSkeleton,
   MimoCard,
-  NoDataBlock,
   ScoreCircle,
   StatusBadge,
   Toast,
 } from "@/components/shared/Score";
-import {
-  categorizeSpecs,
-  generateSpecsMimo,
-  PEFAS_INFO,
-  SPEC_ICONS,
-} from "@/features/offers/analysis";
+import { addOfferToCompareGroups } from "@/features/compare/store";
+import { categorizeSpecs, generateSpecsMimo, PEFAS_INFO, SPEC_ICONS } from "@/features/offers/analysis";
+import { addOfferToProject, getProjectsWithOffers, type Project } from "@/features/projects/api";
 import { getCategoryIcon } from "@/lib/categories";
 import { deriveUserJourney, getOfferTruthDescriptor } from "@/lib/core";
 import type { Offer } from "@/lib/data";
 import { generateMimo } from "@/lib/mimo/engine";
-import { analyzeProject } from "@/lib/projects/service";
 import { getOfferDisplayScore, rankOffersByScore, toBaseOffer } from "@/lib/score/engine";
-import { addOfferToProject, getProjectsWithOffers, type Project } from "@/features/projects/api";
-import { addOfferToCompareGroups } from "@/features/compare/store";
-import {
-  addFavorite,
-  getFavorites,
-  getOfferById,
-  getOffers,
-  recordView,
-  removeFavorite,
-} from "@/lib/queries";
+import { addFavorite, getFavorites, getOfferById, getOffers, recordView, removeFavorite } from "@/lib/queries";
 
-export default function OfferDetailPage() {
+function getProductGroupKey(offer: Offer) {
+  return [offer.category, offer.subcategory, offer.brand, offer.model || offer.product].join("::");
+}
+
+function buildPriceChartPath(points: Array<{ date: string; price: number }>) {
+  if (points.length === 0) return "";
+  const minPrice = Math.min(...points.map((entry) => entry.price));
+  const maxPrice = Math.max(...points.map((entry) => entry.price));
+  const span = Math.max(1, maxPrice - minPrice);
+
+  return points
+    .map((entry, index) => {
+      const x = 20 + (index * 280) / Math.max(1, points.length - 1);
+      const y = 105 - ((entry.price - minPrice) / span) * 70;
+      return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+    })
+    .join(" ");
+}
+
+export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
 
-  const [offer, setOffer] = useState<Offer | null>(null);
+  const [productOffer, setProductOffer] = useState<Offer | null>(null);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [merchantOffers, setMerchantOffers] = useState<Offer[]>([]);
   const [alternatives, setAlternatives] = useState<Offer[]>([]);
-  const [isFav, setIsFav] = useState(false);
-  const [activeAxis, setActiveAxis] = useState<string | null>(null);
+  const [favoriteOfferIds, setFavoriteOfferIds] = useState<string[]>([]);
+  const [hoveredOfferId, setHoveredOfferId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
   const [toastMsg, setToastMsg] = useState("");
@@ -58,488 +61,304 @@ export default function OfferDetailPage() {
 
   function showToast(message: string) {
     setToastMsg(message);
-    setTimeout(() => setToastMsg(""), 2000);
+    window.setTimeout(() => setToastMsg(""), 2200);
   }
 
   useEffect(() => {
-    async function loadOfferPage() {
+    async function loadPage() {
       setLoading(true);
-      setOffer(null);
-      setAlternatives([]);
 
-      const offerId = String(params.id);
-      let currentOffer = await getOfferById(offerId);
+      const requestedId = String(params.id);
+      let currentOffer = await getOfferById(requestedId);
 
-      if (!currentOffer && offerId.startsWith("bestbuy-")) {
-        const response = await fetch("/api/bestbuy/offers?ids=" + encodeURIComponent(offerId));
+      if (!currentOffer && requestedId.startsWith("bestbuy-")) {
+        const response = await fetch("/api/bestbuy/offers?ids=" + encodeURIComponent(requestedId));
         if (response.ok) {
           const json = await response.json();
           currentOffer = (json.offers?.[0] || null) as Offer | null;
         }
       }
 
-      setOffer(currentOffer);
-
-      if (currentOffer) {
-        void recordView(currentOffer.id);
-
-        const sameSubcategoryOffers = await getOffers({ subcategory: currentOffer.subcategory });
-        let nextAlternatives = sameSubcategoryOffers.filter((item) => item.id !== currentOffer.id);
-
-        if (nextAlternatives.length === 0 && currentOffer.subcategory) {
-          const response = await fetch(
-            "/api/bestbuy/offers?category=" +
-              encodeURIComponent(currentOffer.category) +
-              "&subcategory=" +
-              encodeURIComponent(currentOffer.subcategory) +
-              "&limit=4",
-          );
-
-          if (response.ok) {
-            const json = await response.json();
-            nextAlternatives = ((json.offers || []) as Offer[]).filter((item) => item.id !== currentOffer.id);
-          }
-        }
-
-        setAlternatives(
-          rankOffersByScore(nextAlternatives)
-            .map(toBaseOffer)
-            .slice(0, 4),
-        );
-
-        const favorites = await getFavorites();
-        setIsFav(favorites.includes(currentOffer.id));
+      if (!currentOffer) {
+        setProductOffer(null);
+        setMerchantOffers([]);
+        setAlternatives([]);
+        setLoading(false);
+        return;
       }
 
-      const projectData = await getProjectsWithOffers();
+      void recordView(currentOffer.id);
+      const [sameSubcategoryOffers, favorites, projectData] = await Promise.all([
+        getOffers({ subcategory: currentOffer.subcategory }),
+        getFavorites(),
+        getProjectsWithOffers(),
+      ]);
+
+      const sameProductOffers = sameSubcategoryOffers
+        .filter((item) => getProductGroupKey(item) === getProductGroupKey(currentOffer))
+        .sort((a, b) => a.price - b.price);
+
+      const groupedOffers = sameProductOffers.length > 0 ? sameProductOffers : [currentOffer];
+      const nextAlternatives = sameSubcategoryOffers.filter((item) => getProductGroupKey(item) !== getProductGroupKey(currentOffer));
+
+      setProductOffer(groupedOffers[0]);
+      setSelectedOfferId(groupedOffers[0]?.id || currentOffer.id);
+      setMerchantOffers(groupedOffers);
+      setFavoriteOfferIds(favorites);
       setProjects(projectData.projects);
       setProjectOffers(projectData.projectOffers);
-
+      setAlternatives(rankOffersByScore(nextAlternatives).map(toBaseOffer).slice(0, 4));
       setLoading(false);
     }
 
-    void loadOfferPage();
+    void loadPage();
   }, [params.id]);
 
-  async function toggleFav() {
-    if (!offer) return;
+  const selectedOffer = useMemo(
+    () => merchantOffers.find((offer) => offer.id === selectedOfferId) || merchantOffers[0] || productOffer,
+    [merchantOffers, productOffer, selectedOfferId],
+  );
 
-    if (isFav) {
-      await removeFavorite(offer.id);
-      setIsFav(false);
-      showToast("Retire des favoris");
+  async function toggleFavorite(offerId: string) {
+    const isFavorite = favoriteOfferIds.includes(offerId);
+    if (isFavorite) {
+      await removeFavorite(offerId);
+      setFavoriteOfferIds((current) => current.filter((id) => id !== offerId));
+      showToast("Retirée des favoris");
       return;
     }
 
-    await addFavorite(offer.id);
-    setIsFav(true);
-    showToast("Ajoute aux favoris");
+    await addFavorite(offerId);
+    setFavoriteOfferIds((current) => [...current, offerId]);
+    showToast("Ajoutée aux favoris");
   }
 
-  async function addToProject(projectId: string) {
-    if (!offer) return;
-
-    const result = await addOfferToProject(projectId, offer.id);
-
+  async function handleAddToProject(projectId: string, offerId: string) {
+    const result = await addOfferToProject(projectId, offerId);
     if (!result.success && result.reason === "exists") {
-      showToast("Deja dans ce projet");
-    } else if (result.success) {
-      const project = projects.find((item) => item.id === projectId);
-      showToast("Ajoute a " + (project?.name || "projet"));
-      const projectData = await getProjectsWithOffers();
-      setProjects(projectData.projects);
-      setProjectOffers(projectData.projectOffers);
+      showToast("Déjà dans ce projet");
+      return;
     }
 
-    setShowProjectMenu(false);
+    if (result.success) {
+      const nextProjects = await getProjectsWithOffers();
+      setProjects(nextProjects.projects);
+      setProjectOffers(nextProjects.projectOffers);
+      const project = nextProjects.projects.find((item) => item.id === projectId);
+      showToast("Ajoutée à " + (project?.name || "votre projet"));
+    }
   }
 
-  function handleCompareOffer(nextOffer: Offer) {
-    const result = addOfferToCompareGroups(nextOffer);
+  function handleCompareOffer(offer: Offer) {
+    const result = addOfferToCompareGroups(offer);
 
     if (result.status === "exists") {
-      showToast("Deja dans la comparaison " + result.family.label);
-    } else if (result.status === "full") {
-      showToast("Comparaison " + result.family.label + " deja complete");
-    } else {
-      showToast("Ajoute a la comparaison " + result.family.label);
+      showToast("Cette offre est déjà dans " + result.family.label);
+      return;
     }
+
+    if (result.status === "full") {
+      showToast(result.family.label + " contient déjà 3 offres maximum");
+      return;
+    }
+
+    showToast("Offre ajoutée à " + result.family.label);
   }
 
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
-        <div className="flex gap-4 animate-pulse">
-          <div className="w-24 h-24 bg-gray-200 rounded-xl"></div>
-          <div className="flex-1 space-y-2">
-            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-            <div className="h-5 bg-gray-200 rounded w-2/3"></div>
-          </div>
-        </div>
-        <LoadingSkeleton count={3} type="simple" />
+        <div className="h-6 w-20 animate-pulse rounded bg-gray-200"></div>
+        <LoadingSkeleton count={4} />
       </div>
     );
   }
 
-  if (!offer) {
+  if (!productOffer || !selectedOffer) {
     return (
       <EmptyState
         icon="?"
-        title="Offre introuvable"
-        description="Cette offre n existe pas ou a ete supprimee."
+        title="Produit introuvable"
+        description="Ce produit n’existe pas ou n’est plus disponible."
         action={() => router.push("/explorer")}
-        actionLabel="Retour a l Explorer"
+        actionLabel="Retour à l’explorer"
       />
     );
   }
 
-  const categoryIcon = getCategoryIcon(offer.category);
-  const truth = getOfferTruthDescriptor(offer);
-  const mimoText = generateMimo({ offer, mode: "offer" });
-
-  const safePefas = offer.pefas ?? {};
-  const pefasEntries = Object.entries(safePefas) as Array<[string, number]>;
-
-  const bestAxis =
-    pefasEntries.length > 0
-      ? [...pefasEntries].sort((a, b) => Number(b[1]) - Number(a[1]))[0]
-      : null;
-
-  const worstAxis =
-    pefasEntries.length > 0
-      ? [...pefasEntries].sort((a, b) => Number(a[1]) - Number(b[1]))[0]
-      : null;
-
-  const safeSpecs = offer.specs ?? {};
+  const truth = getOfferTruthDescriptor(selectedOffer);
+  const safeSpecs = selectedOffer.specs ?? {};
   const specCategories = categorizeSpecs(safeSpecs);
   const hasSpecs = Object.keys(safeSpecs).length > 0;
+  const sortedPriceHistory = [...(selectedOffer.priceHistory || [])].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const pathData = buildPriceChartPath(sortedPriceHistory);
+  const mimoText =
+    selectedOffer.reasons.length > 0 || selectedOffer.vigilances.length > 0
+      ? `Sur cette offre, Mimo voit surtout ${selectedOffer.reasons.slice(0, 2).join(" et ").toLowerCase()}. ${
+          selectedOffer.vigilances[0]
+            ? "Le principal point de vigilance reste " + selectedOffer.vigilances[0].toLowerCase() + "."
+            : "Le niveau global reste cohérent si ce produit correspond bien à votre besoin."
+        }`
+      : generateMimo({ offer: selectedOffer, mode: "offer" });
 
   const journey = deriveUserJourney(projects, projectOffers);
   const activeProjectId = journey.activeProjectId || projects[0]?.id;
   const activeProject = projects.find((project) => project.id === activeProjectId) || null;
-  const currentProjectOffers = activeProject ? projectOffers[activeProject.id] || [] : [];
-  const alreadyInActiveProject = currentProjectOffers.some((item) => item.id === offer.id);
-  const projectedOffers = alreadyInActiveProject ? currentProjectOffers : [...currentProjectOffers, offer];
-
-  const projectedAnalysis = activeProject
-    ? analyzeProject({
-        projectId: activeProject.id,
-        projectName: activeProject.name,
-        projectCategory: activeProject.category,
-        projectBudget: activeProject.budget,
-        projectObjective: activeProject.objective,
-        existingOffers: projectedOffers,
-      })
-    : null;
-
-  const currentBestInProject = activeProject
-    ? analyzeProject({
-        projectId: activeProject.id,
-        projectName: activeProject.name,
-        projectCategory: activeProject.category,
-        projectBudget: activeProject.budget,
-        projectObjective: activeProject.objective,
-        existingOffers: currentProjectOffers,
-      }).bestOffer
-    : null;
-
-  const projectedBestOffer = projectedAnalysis?.bestOffer || null;
-  const compareIds = projectedOffers.map((item) => item.id);
-
-  const projectDecisionText = !activeProject
-    ? "Creez un projet pour voir comment cette offre se comporte dans votre vrai contexte de decision."
-    : alreadyInActiveProject
-      ? "Cette offre est deja rattachee au projet " + activeProject.name + ". Vous pouvez maintenant l'analyser dans une comparaison contextualisee."
-      : projectedBestOffer?.id === offer.id
-        ? "Dans le projet " + activeProject.name + ", cette offre deviendrait le choix recommande a ce stade."
-        : currentBestInProject
-          ? "Cette offre enrichit le projet " + activeProject.name + ", mais " + currentBestInProject.brand + " " + currentBestInProject.product + " reste devant pour l'instant."
-          : "Cette offre lancerait reellement l'analyse du projet " + activeProject.name + ".";
 
   return (
     <div className="space-y-4">
       <Toast message={toastMsg} />
 
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <button onClick={() => router.back()} className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-950">
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <polyline points="15 18 9 12 15 6" />
         </svg>
         Retour
       </button>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex gap-4 items-start">
-          <div className="w-24 h-24 overflow-hidden rounded-xl bg-gray-50 flex items-center justify-center text-4xl shrink-0">
-            {offer.imageUrl ? (
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 text-4xl">
+            {productOffer.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={offer.imageUrl} alt={offer.product} className="h-full w-full object-cover" />
+              <img src={productOffer.imageUrl} alt={productOffer.product} className="h-full w-full object-cover" />
             ) : (
-              categoryIcon
+              getCategoryIcon(productOffer.category)
             )}
           </div>
           <div className="flex-1">
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{offer.brand}</p>
-            <h2 className="text-lg font-bold">{offer.product}</h2>
-            <p className="text-xs text-gray-500">{offer.model}</p>
-            <div className="flex gap-1.5 mt-2 flex-wrap">
-              <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">
-                {offer.merchant}
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{productOffer.brand}</p>
+            <h2 className="text-lg font-bold">{productOffer.product}</h2>
+            <p className="text-xs text-gray-500">{productOffer.model}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{productOffer.subcategory}</span>
+              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                {merchantOffers.length} offre{merchantOffers.length > 1 ? "s" : ""} marchande{merchantOffers.length > 1 ? "s" : ""} référencée{merchantOffers.length > 1 ? "s" : ""}
               </span>
-              <span className="text-xs px-2 py-0.5 rounded-lg bg-gray-100 text-gray-600 font-medium">
-                {offer.subcategory}
-              </span>
-              <DataTruthBadge label={truth.label} state={truth.state} />
             </div>
           </div>
         </div>
       </div>
 
-      {truth.state !== "reliable" && (
-        <IncompleteDataWarning
-          description={
-            truth.description +
-            (truth.missingFields.length
-              ? " Champs manquants : " + truth.missingFields.join(", ") + "."
-              : "")
-          }
-        />
-      )}
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <span className="text-2xl font-extrabold">{offer.price.toLocaleString("fr-FR")} EUR</span>
-            {offer.barredPrice && (
-              <span className="text-sm text-gray-400 line-through ml-2">
-                {offer.barredPrice.toLocaleString("fr-FR")} EUR
-              </span>
-            )}
-            {offer.barredPrice && (
-              <span className="text-xs font-semibold text-blue-700 ml-2">
-                -{Math.round((1 - offer.price / offer.barredPrice) * 100)}%
-              </span>
-            )}
+            <p className="text-[0.7rem] font-bold uppercase tracking-wide text-blue-950">Offres marchands</p>
+            <h3 className="mt-1 font-bold">Le score MAREF s’applique à chaque offre, pas à la fiche produit</h3>
+            <p className="mt-1 text-sm text-gray-500">Choisissez une offre marchande pour afficher son score, ses axes PEFAS, son historique et sa redirection.</p>
           </div>
-          <span
-            className={
-              "text-xs font-semibold px-2.5 py-1 rounded-full " +
-              (offer.availability === "Disponible"
-                ? "bg-blue-100 text-blue-800"
-                : "bg-yellow-100 text-yellow-700")
-            }
-          >
-            {offer.availability}
-          </span>
+          <DataTruthBadge label={truth.label} state={truth.state} />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { l: "Livraison", v: offer.delivery },
-            { l: "Disponibilite", v: offer.availability },
-            { l: "Garantie", v: offer.warranty },
-          ].map((item) => (
-            <div key={item.l} className="bg-gray-50 rounded-lg p-2 text-center">
-              <p className="text-[0.6rem] text-gray-400">{item.l}</p>
-              <p className="text-xs font-semibold">{item.v}</p>
-            </div>
-          ))}
-        </div>
+        <div className="space-y-2">
+          {merchantOffers.map((merchantOffer) => {
+            const isSelected = merchantOffer.id === selectedOffer.id;
+            const isFavorite = favoriteOfferIds.includes(merchantOffer.id);
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {offer.lastUpdated && (
-            <span className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700">
-              Mis a jour : {offer.lastUpdated}
-            </span>
-          )}
-          {offer.sourceUrl && (
-            <a
-              href={offer.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 transition-colors"
-            >
-              Voir la source
-            </a>
-          )}
-        </div>
-      </div>
+            return (
+              <div
+                key={merchantOffer.id}
+                className={
+                  "rounded-xl border p-3 transition-all " +
+                  (isSelected ? "border-blue-950 bg-slate-50 shadow-sm" : "border-gray-200 bg-white")
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-slate-950">{merchantOffer.merchant}</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">{merchantOffer.price.toLocaleString("fr-FR")} EUR</p>
+                    <p className="text-xs text-gray-500">
+                      {merchantOffer.delivery} • {merchantOffer.warranty} • {merchantOffer.availability}
+                    </p>
+                  </div>
+                  <div
+                    className="relative flex flex-col items-end gap-2"
+                    onMouseEnter={() => setHoveredOfferId(merchantOffer.id)}
+                    onMouseLeave={() => setHoveredOfferId((current) => (current === merchantOffer.id ? null : current))}
+                  >
+                    <ScoreCircle score={getOfferDisplayScore(merchantOffer)} size="sm" />
+                    <StatusBadge score={getOfferDisplayScore(merchantOffer)} />
+                    {hoveredOfferId === merchantOffer.id && (
+                      <div className="absolute right-0 top-16 z-20 w-72 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+                        <p className="mb-2 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-blue-950">Lecture PEFAS</p>
+                        {Object.entries(PEFAS_INFO).map(([key, info]) => {
+                          const axisValue = merchantOffer.pefas[key as keyof typeof merchantOffer.pefas];
+                          return <AxisBar key={key} label={info.name} value={typeof axisValue === "number" ? axisValue : 0} />;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <button
-          onClick={() => setActiveAxis(activeAxis ? null : "all")}
-          className="flex w-full items-center gap-4 text-left"
-        >
-          <ScoreCircle score={getOfferDisplayScore(offer)} size="lg" />
-          <div className="flex-1">
-            <p className="font-bold">Score MAREF et lecture PEFAS</p>
-            <StatusBadge score={getOfferDisplayScore(offer)} />
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                Confiance : {offer.confidence}
-              </span>
-              <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                {offer.freshness}
-              </span>
-              {bestAxis && (
-                <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
-                  Meilleur axe : {PEFAS_INFO[bestAxis[0]]?.name ?? bestAxis[0]}
-                </span>
-              )}
-              {worstAxis && (
-                <span className="rounded-lg bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
-                  Axe à surveiller : {PEFAS_INFO[worstAxis[0]]?.name ?? worstAxis[0]}
-                </span>
-              )}
-            </div>
-            <p className="mt-3 text-xs font-semibold text-blue-700">
-              {activeAxis ? "Masquer le détail des axes PEFAS" : "Afficher le détail des axes PEFAS"}
-            </p>
-          </div>
-        </button>
-
-        {activeAxis && (
-          <div className="mt-4 border-t border-gray-100 pt-4">
-            {Object.entries(PEFAS_INFO).map(([key, info]) => {
-              const axisValue = safePefas[key as keyof typeof safePefas];
-              const numericValue = typeof axisValue === "number" ? axisValue : 0;
-
-              return (
-                <div key={key}>
-                  <AxisBar
-                    label={info.name}
-                    value={numericValue}
-                    onClick={() => setActiveAxis(activeAxis === key ? "all" : key)}
-                  />
-
-                  {activeAxis === key && (
-                    <div className="mb-3 rounded-xl border border-gray-100 bg-gray-50 p-3">
-                      <p className="mb-2 text-xs text-gray-600">{info.desc}</p>
-                      <MimoCard
-                        compact
-                        text={
-                          "Sur l’axe " +
-                          info.name +
-                          " (" +
-                          numericValue +
-                          "/100), " +
-                          (numericValue >= 75
-                            ? "c’est un point fort de cette offre."
-                            : numericValue >= 55
-                              ? "le niveau est correct mais encore discutable."
-                              : "la vigilance est nécessaire avant décision.")
-                        }
-                      />
-                    </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedOfferId(merchantOffer.id)}
+                    className={
+                      "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors " +
+                      (isSelected ? "bg-blue-950 text-white" : "border border-gray-200 bg-white text-gray-700 hover:border-blue-300")
+                    }
+                  >
+                    {isSelected ? "Offre sélectionnée" : "Analyser"}
+                  </button>
+                  <button
+                    onClick={() => handleCompareOffer(merchantOffer)}
+                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-blue-950 transition-colors hover:bg-slate-200"
+                  >
+                    Comparer
+                  </button>
+                  <button
+                    onClick={() => void toggleFavorite(merchantOffer.id)}
+                    className={
+                      "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors " +
+                      (isFavorite ? "bg-blue-950 text-white" : "border border-gray-200 bg-white text-gray-700 hover:border-blue-300")
+                    }
+                  >
+                    {isFavorite ? "En favoris" : "Favoris"}
+                  </button>
+                  {activeProject ? (
+                    <button
+                      onClick={() => void handleAddToProject(activeProject.id, merchantOffer.id)}
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-blue-300"
+                    >
+                      Ajouter à {activeProject.name}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => router.push("/projets")}
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-blue-300"
+                    >
+                      Créer un projet
+                    </button>
+                  )}
+                  {merchantOffer.sourceUrl && (
+                    <a
+                      href={merchantOffer.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-blue-300"
+                    >
+                      Voir l’offre
+                    </a>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[0.7rem] font-bold text-blue-700 uppercase tracking-wide">
-              Decision guidee
-            </p>
-            <h3 className="font-bold mt-1">
-              {activeProject ? "Impact sur " + activeProject.name : "Projetez cette offre dans un projet"}
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">{projectDecisionText}</p>
-          </div>
-          {projectedAnalysis?.averageScore ? (
-            <ScoreCircle score={projectedAnalysis.averageScore} size="sm" />
-          ) : null}
-        </div>
-
-        {activeProject && projectedAnalysis && (
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-blue-700">{projectedOffers.length}</p>
-              <p className="text-[0.65rem] text-gray-500">Offres projet</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-blue-700">{projectedAnalysis.budgetStatus}</p>
-              <p className="text-[0.65rem] text-gray-500">Budget</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-sm font-bold text-blue-700">
-                {projectedBestOffer?.id === offer.id ? "Oui" : "A valider"}
-              </p>
-              <p className="text-[0.65rem] text-gray-500">Choix recommande</p>
-            </div>
-          </div>
-        )}
-
-        {activeProject && projectedAnalysis && (
-          <div className="relative bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-3 mt-4">
-            <span className="absolute -top-2 left-3 bg-blue-700 text-white text-[0.6rem] font-bold px-2 py-0.5 rounded">
-              Mimo
-            </span>
-            <p className="text-xs text-gray-700 mt-2 leading-relaxed">
-              {projectedAnalysis.recommendation}
-            </p>
-          </div>
-        )}
-
-        <div className="flex gap-2 mt-4 flex-wrap">
-          {activeProject ? (
-            <button
-              onClick={() => void addToProject(activeProject.id)}
-              className="text-xs font-semibold bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-800 transition-colors"
-            >
-              {alreadyInActiveProject ? "Deja dans le projet" : "Ajouter a " + activeProject.name}
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push("/projets")}
-              className="text-xs font-semibold bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-800 transition-colors"
-            >
-              Creer un projet
-            </button>
-          )}
-
-          {activeProject && compareIds.length >= 2 && (
-            <Link
-              href={"/comparer?project=" + activeProject.id + "&ids=" + compareIds.join(",")}
-              className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-blue-300 transition-colors"
-            >
-              Comparer dans ce projet
-            </Link>
-          )}
-
-          <Link
-            href="/projets"
-            className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-blue-300 transition-colors"
-          >
-            Voir mes projets
-          </Link>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <MimoCard text={mimoText} />
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-gray-100 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-bold text-sm">Donnees techniques</h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {Object.keys(safeSpecs).length} caracteristiques
-              </p>
+              <h3 className="text-sm font-bold">Données techniques</h3>
+              <p className="mt-0.5 text-xs text-gray-400">{Object.keys(safeSpecs).length} caractéristiques</p>
             </div>
             {hasSpecs && (
-              <button
-                onClick={() => setShowAllSpecs(!showAllSpecs)}
-                className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                {showAllSpecs ? "Reduire" : "Tout voir"}
+              <button onClick={() => setShowAllSpecs(!showAllSpecs)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-blue-950 transition-colors hover:bg-slate-200">
+                {showAllSpecs ? "Réduire" : "Tout voir"}
               </button>
             )}
           </div>
@@ -547,20 +366,17 @@ export default function OfferDetailPage() {
 
         {!hasSpecs ? (
           <div className="p-6 text-center">
-            <p className="text-2xl mb-2">?</p>
-            <p className="text-sm text-gray-500">
-              Donnees techniques non disponibles pour ce produit.
-            </p>
+            <p className="text-sm text-gray-500">Données techniques non disponibles pour cette offre.</p>
           </div>
         ) : (
           <div>
-            <div className="p-4 bg-gray-50 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 mb-2">Caracteristiques cles</p>
+            <div className="border-b border-gray-100 bg-gray-50 p-4">
+              <p className="mb-2 text-xs font-semibold text-gray-500">Caractéristiques clés</p>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(safeSpecs).slice(0, 6).map(([key, value]) => (
-                  <div key={key} className="bg-white rounded-lg p-2 text-center border border-gray-100">
+                  <div key={key} className="rounded-lg border border-gray-100 bg-white p-2 text-center">
                     <p className="text-[0.6rem] text-gray-400">{key}</p>
-                    <p className="text-xs font-bold text-gray-800 mt-0.5">{String(value)}</p>
+                    <p className="mt-0.5 text-xs font-bold text-gray-800">{String(value)}</p>
                   </div>
                 ))}
               </div>
@@ -570,69 +386,25 @@ export default function OfferDetailPage() {
               <div className="divide-y divide-gray-100">
                 {Object.entries(specCategories).map(([categoryName, items]) => (
                   <div key={categoryName}>
-                    <button
-                      onClick={() => setActiveSpecCat(activeSpecCat === categoryName ? null : categoryName)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-                    >
+                    <button onClick={() => setActiveSpecCat(activeSpecCat === categoryName ? null : categoryName)} className="flex w-full items-center justify-between p-4 transition-colors hover:bg-gray-50">
                       <div className="flex items-center gap-2">
                         <span className="text-base">{SPEC_ICONS[categoryName] || "[]"}</span>
                         <span className="text-sm font-semibold">{categoryName}</span>
-                        <span className="text-[0.65rem] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-                          {items.length}
-                        </span>
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[0.65rem] text-gray-400">{items.length}</span>
                       </div>
-                      <svg
-                        className={
-                          "w-4 h-4 text-gray-400 transition-transform " +
-                          (activeSpecCat === categoryName ? "rotate-180" : "")
-                        }
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className={"h-4 w-4 text-gray-400 transition-transform " + (activeSpecCat === categoryName ? "rotate-180" : "")} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
 
                     {activeSpecCat === categoryName && (
                       <div className="px-4 pb-4">
-                        {items.map(([key, value]) => {
-                          const valueStr = String(value);
-
-                          const isGood =
-                            (key.includes("energetique") && (valueStr === "A" || valueStr === "B")) ||
-                            (key.includes("sonore") && parseInt(valueStr, 10) <= 42) ||
-                            key.includes("No Frost") ||
-                            valueStr.includes("No Frost") ||
-                            (key.includes("Dolby") && valueStr === "Oui") ||
-                            (key === "Vapeur" && valueStr === "Oui");
-
-                          const isBad =
-                            (key.includes("energetique") && (valueStr === "F" || valueStr === "G")) ||
-                            (key.includes("sonore") && parseInt(valueStr, 10) >= 55);
-
-                          return (
-                            <div
-                              key={key}
-                              className={
-                                "flex items-center justify-between py-2 border-b border-gray-50 last:border-0 " +
-                                (isGood
-                                  ? "bg-blue-50/50 -mx-2 px-2 rounded"
-                                  : isBad
-                                    ? "bg-red-50/50 -mx-2 px-2 rounded"
-                                    : "")
-                              }
-                            >
-                              <span className="text-xs text-gray-600">{key}</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-gray-800">{valueStr}</span>
-                                {isGood && <span className="text-[0.6rem]">OK</span>}
-                                {isBad && <span className="text-[0.6rem]">!</span>}
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {items.map(([key, value]) => (
+                          <div key={key} className="flex items-center justify-between border-b border-gray-50 py-2 last:border-0">
+                            <span className="text-xs text-gray-600">{key}</span>
+                            <span className="text-xs font-semibold text-gray-800">{String(value)}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -641,7 +413,7 @@ export default function OfferDetailPage() {
             )}
 
             {showAllSpecs && (
-              <div className="p-4 border-t border-gray-100">
+              <div className="border-t border-gray-100 p-4">
                 <MimoCard compact text={generateSpecsMimo(safeSpecs)} />
               </div>
             )}
@@ -649,125 +421,91 @@ export default function OfferDetailPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <h4 className="font-bold text-sm mb-2 text-blue-700">
-          Points forts ({offer.reasons.length})
-        </h4>
-        {(showAllReasons ? offer.reasons : offer.reasons.slice(0, 3)).map((reason, index) => (
-          <div
-            key={index}
-            className="py-2 border-b border-gray-100 last:border-0 text-sm flex items-center gap-2"
-          >
-            <svg
-              className="w-4 h-4 text-blue-600 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h4 className="mb-2 text-sm font-bold text-blue-950">Points forts ({selectedOffer.reasons.length})</h4>
+        {(showAllReasons ? selectedOffer.reasons : selectedOffer.reasons.slice(0, 3)).map((reason, index) => (
+          <div key={index} className="flex items-center gap-2 border-b border-gray-100 py-2 text-sm last:border-0">
+            <svg className="h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             {reason}
           </div>
         ))}
-        {offer.reasons.length > 3 && (
-          <button
-            onClick={() => setShowAllReasons(!showAllReasons)}
-            className="text-xs font-semibold text-blue-700 mt-2 hover:underline"
-          >
-            {showAllReasons ? "Voir moins" : "Voir tout (" + offer.reasons.length + ")"}
+        {selectedOffer.reasons.length > 3 && (
+          <button onClick={() => setShowAllReasons(!showAllReasons)} className="mt-2 text-xs font-semibold text-blue-950 hover:underline">
+            {showAllReasons ? "Voir moins" : "Voir tout (" + selectedOffer.reasons.length + ")"}
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <h4 className="font-bold text-sm mb-2 text-yellow-600">
-          Points de vigilance ({offer.vigilances.length})
-        </h4>
-        {(showAllVigilances ? offer.vigilances : offer.vigilances.slice(0, 2)).map(
-          (vigilance, index) => (
-            <div
-              key={index}
-              className="py-2 border-b border-gray-100 last:border-0 text-sm flex items-center gap-2"
-            >
-              <svg
-                className="w-4 h-4 text-yellow-500 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              {vigilance}
-            </div>
-          ),
-        )}
-        {offer.vigilances.length > 2 && (
-          <button
-            onClick={() => setShowAllVigilances(!showAllVigilances)}
-            className="text-xs font-semibold text-yellow-600 mt-2 hover:underline"
-          >
-            {showAllVigilances ? "Voir moins" : "Voir tout (" + offer.vigilances.length + ")"}
-          </button>
-        )}
-      </div>
-
-      {offer.priceHistory && offer.priceHistory.length > 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-bold text-sm">Historique de prix</h3>
-              <p className="text-xs text-gray-500 mt-1">Données réellement enregistrées pour cette offre.</p>
-            </div>
+      <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h4 className="mb-2 text-sm font-bold text-yellow-700">Points de vigilance ({selectedOffer.vigilances.length})</h4>
+        {(showAllVigilances ? selectedOffer.vigilances : selectedOffer.vigilances.slice(0, 2)).map((vigilance, index) => (
+          <div key={index} className="flex items-center gap-2 border-b border-gray-100 py-2 text-sm last:border-0">
+            <svg className="h-4 w-4 shrink-0 text-yellow-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {vigilance}
           </div>
-          <div className="space-y-2">
-            {offer.priceHistory
-              .slice()
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map((entry) => (
-                <div key={entry.date + entry.price} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {entry.price.toLocaleString("fr-FR")} EUR
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(entry.date).toLocaleDateString("fr-FR")}
-                    </p>
-                  </div>
-                  {entry.sourceUrl ? (
-                    <a
-                      href={entry.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-50"
-                    >
-                      Source
-                    </a>
-                  ) : (
-                    <span className="text-xs text-gray-400">Source non liée</span>
-                  )}
+        ))}
+        {selectedOffer.vigilances.length > 2 && (
+          <button onClick={() => setShowAllVigilances(!showAllVigilances)} className="mt-2 text-xs font-semibold text-yellow-700 hover:underline">
+            {showAllVigilances ? "Voir moins" : "Voir tout (" + selectedOffer.vigilances.length + ")"}
+          </button>
+        )}
+      </div>
+
+      {sortedPriceHistory.length > 0 && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-3">
+            <h3 className="text-sm font-bold">Historique de prix</h3>
+            <p className="mt-1 text-xs text-gray-500">Courbe construite à partir des relevés enregistrés pour l’offre sélectionnée.</p>
+          </div>
+          <svg viewBox="0 0 320 140" className="h-40 w-full overflow-visible">
+            <path d={pathData} fill="none" stroke="#10294e" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {sortedPriceHistory.map((entry, index) => {
+              const minPrice = Math.min(...sortedPriceHistory.map((item) => item.price));
+              const maxPrice = Math.max(...sortedPriceHistory.map((item) => item.price));
+              const span = Math.max(1, maxPrice - minPrice);
+              const x = 20 + (index * 280) / Math.max(1, sortedPriceHistory.length - 1);
+              const y = 105 - ((entry.price - minPrice) / span) * 70;
+              return (
+                <g key={entry.date + entry.price}>
+                  <circle cx={x} cy={y} r="4" fill="#10294e" />
+                  <text x={x} y="126" textAnchor="middle" fontSize="10" fill="#64748b">
+                    {new Date(entry.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+          <div className="mt-4 space-y-2">
+            {[...sortedPriceHistory].reverse().map((entry) => (
+              <div key={entry.date + entry.price} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{entry.price.toLocaleString("fr-FR")} EUR</p>
+                  <p className="text-xs text-gray-500">{new Date(entry.date).toLocaleDateString("fr-FR")}</p>
                 </div>
-              ))}
+                {entry.sourceUrl ? (
+                  <a href={entry.sourceUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:border-blue-300">
+                    Source
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-400">Source non liée</span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-      ) : (
-        <NoDataBlock
-          title="Historique de prix indisponible"
-          description="MAREF n’affiche plus de courbe simulée. Tant qu’aucun relevé réel n’est rattaché à cette offre, cette section reste vide."
-        />
       )}
 
       {alternatives.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-sm">Alternatives ({alternatives.length})</h3>
-            <button
-              onClick={() => router.push("/explorer")}
-              className="text-xs font-semibold text-blue-700"
-            >
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold">Alternatives ({alternatives.length})</h3>
+            <button onClick={() => router.push("/explorer")} className="text-xs font-semibold text-blue-950">
               Voir tout
             </button>
           </div>
@@ -776,97 +514,21 @@ export default function OfferDetailPage() {
               <div
                 key={alternative.id}
                 onClick={() => router.push("/explorer/" + alternative.id)}
-                className="bg-white rounded-xl border border-gray-200 p-3 flex gap-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                className="group flex cursor-pointer gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md"
               >
-                <div className="w-12 h-12 rounded-lg bg-gray-50 flex items-center justify-center text-xl shrink-0 group-hover:bg-blue-50 transition-colors">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-xl transition-colors group-hover:bg-slate-100">
                   {getCategoryIcon(alternative.category)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[0.65rem] text-gray-400 uppercase font-medium">
-                        {alternative.brand}
-                      </p>
-                      <p className="font-semibold text-xs truncate group-hover:text-blue-700">
-                        {alternative.product}
-                      </p>
-                    </div>
-                    <ScoreCircle score={getOfferDisplayScore(alternative)} size="xs" />
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="font-bold text-xs">
-                      {alternative.price.toLocaleString("fr-FR")} EUR
-                    </span>
-                    <span className="text-[0.6rem] text-gray-400">{alternative.merchant}</span>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.65rem] font-medium uppercase text-gray-400">{alternative.brand}</p>
+                  <p className="truncate text-xs font-semibold transition-colors group-hover:text-blue-950">{alternative.product}</p>
+                  <p className="mt-1 text-[0.7rem] text-gray-400">{alternative.merchant}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={toggleFav}
-            className={
-              "flex-1 text-sm font-semibold px-4 py-3 rounded-xl transition-colors " +
-              (isFav
-                ? "bg-blue-700 text-white shadow-md"
-                : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300")
-            }
-          >
-            {isFav ? "En favoris" : "Favoris"}
-          </button>
-
-          <button
-            onClick={() => handleCompareOffer(offer)}
-            className="flex-1 text-sm font-semibold px-4 py-3 rounded-xl bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
-          >
-            Comparer
-          </button>
-        </div>
-
-        <div className="relative mt-2">
-          <button
-            onClick={() => setShowProjectMenu(!showProjectMenu)}
-            className="w-full text-sm font-semibold px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-blue-300 transition-colors"
-          >
-            Ajouter au projet
-          </button>
-
-          {showProjectMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowProjectMenu(false)}></div>
-              <div className="absolute bottom-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 animate-scale-in">
-                {projects.length === 0 ? (
-                  <div className="px-4 py-3 text-center">
-                    <p className="text-sm text-gray-500 mb-2">Aucun projet</p>
-                    <button
-                      onClick={() => router.push("/projets")}
-                      className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg"
-                    >
-                      Creer un projet
-                    </button>
-                  </div>
-                ) : (
-                  projects.map((project) => (
-                    <button
-                      key={project.id}
-                      onClick={() => void addToProject(project.id)}
-                      className="block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-                    >
-                      <span className="font-medium">{project.name}</span>
-                      <span className="text-xs text-gray-400 ml-1.5">{project.category}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

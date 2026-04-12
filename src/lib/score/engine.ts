@@ -25,17 +25,17 @@ export function computeScore(p: number, e: number, f: number, a: number, s: numb
   if ([p, e, f, a, s].some((value) => !Number.isFinite(value) || value < 0 || value > 100)) {
     return null;
   }
-  return Math.round(p * 0.25 + e * 0.25 + f * 0.15 + a * 0.2 + s * 0.15);
+  return Math.round(p * 0.3 + e * 0.15 + f * 0.15 + a * 0.25 + s * 0.15);
 }
 
 export function computeProjectAwareScore(offer: Offer, context?: ProjectDecisionContext) {
   if (!hasEnoughDataForScore(offer)) return null;
 
   const weights = {
-    P: 0.25,
-    E: 0.25,
+    P: 0.3,
+    E: 0.15,
     F: 0.15,
-    A: 0.2,
+    A: 0.25,
     S: 0.15,
   };
 

@@ -100,30 +100,33 @@ function buildImageUrl(brand: string, product: string) {
 }
 
 function buildOffer(categoryId: string, subcategoryId: string, subcategoryName: string, index: number): Offer {
+  const productIndex = Math.floor(index / 2);
+  const merchantIndex = index % MERCHANTS.length;
   const brands = BRAND_POOLS[categoryId] || ["Maref"];
-  const brand = brands[index % brands.length];
-  const merchant = MERCHANTS[index % MERCHANTS.length];
-  const price = getBasePrice(subcategoryId) + index * 17 + (index % 3) * 25;
-  const barredPrice = price + 80 + (index % 4) * 20;
-  const availability = AVAILABILITIES[index % AVAILABILITIES.length];
-  const delivery = DELIVERIES[index % DELIVERIES.length];
-  const warranty = WARRANTIES[index % WARRANTIES.length];
-  const model = `${brand.substring(0, 3).toUpperCase()}-${subcategoryId.substring(0, 3).toUpperCase()}-${(index + 1).toString().padStart(3, "0")}`;
-  const product = `${subcategoryName} ${brand} Serie ${index + 1}`;
+  const brand = brands[productIndex % brands.length];
+  const merchant = MERCHANTS[merchantIndex];
+  const basePrice = getBasePrice(subcategoryId) + productIndex * 27;
+  const price = basePrice + merchantIndex * 9 + (productIndex % 3) * 15;
+  const barredPrice = price + 80 + (merchantIndex % 4) * 20;
+  const availability = AVAILABILITIES[(productIndex + merchantIndex) % AVAILABILITIES.length];
+  const delivery = DELIVERIES[(productIndex + merchantIndex) % DELIVERIES.length];
+  const warranty = WARRANTIES[(productIndex + merchantIndex) % WARRANTIES.length];
+  const model = `${brand.substring(0, 3).toUpperCase()}-${subcategoryId.substring(0, 3).toUpperCase()}-${(productIndex + 1).toString().padStart(3, "0")}`;
+  const product = `${subcategoryName} ${brand} Série ${productIndex + 1}`;
   const pefas = {
-    P: 58 + (index % 8) * 4,
-    E: 54 + ((index + 2) % 8) * 4,
-    F: 56 + ((index + 4) % 8) * 4,
-    A: 60 + ((index + 1) % 8) * 4,
-    S: 55 + ((index + 3) % 8) * 4,
+    P: 58 + (productIndex % 8) * 4,
+    E: 54 + ((productIndex + 2 + merchantIndex) % 8) * 4,
+    F: 56 + ((productIndex + 4 + merchantIndex) % 8) * 4,
+    A: 60 + ((productIndex + 1 + merchantIndex) % 8) * 4,
+    S: 55 + ((productIndex + 3) % 8) * 4,
   };
   const score = computeScore(pefas.P, pefas.E, pefas.F, pefas.A, pefas.S);
   const status = score !== null ? getScoreStatus(score) : null;
   const today = new Date();
-  const currentDate = new Date(today.getTime() - index * 86400000).toISOString().slice(0, 10);
+  const currentDate = new Date(today.getTime() - productIndex * 86400000).toISOString().slice(0, 10);
 
   return {
-    id: `demo-${subcategoryId}-${index + 1}`,
+    id: `demo-${subcategoryId}-${productIndex + 1}-${merchantIndex + 1}`,
     product,
     brand,
     model,
@@ -153,15 +156,15 @@ function buildOffer(categoryId: string, subcategoryId: string, subcategoryName: 
     pefas,
     mimoShort: generateShortMimo(score),
     reasons: [
-      "Offre de demonstration pour peupler le catalogue",
-      `Positionnee dans la sous-categorie ${subcategoryName}`,
-      "Lecture PEFAS calculee automatiquement",
+      "Offre de démonstration pour peupler le catalogue",
+      `Positionnée dans la sous-catégorie ${subcategoryName}`,
+      "Lecture PEFAS calculée automatiquement",
     ],
     vigilances: [
-      "Fiche de demonstration",
-      "Prix et caracteristiques fournis a titre d'apercu",
+      "Fiche de démonstration",
+      "Prix et caractéristiques fournis à titre d’aperçu",
     ],
-    specs: makeSpecs(subcategoryName, index, price),
+    specs: makeSpecs(subcategoryName, productIndex, price),
   };
 }
 

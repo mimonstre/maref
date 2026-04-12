@@ -17,6 +17,7 @@ import {
   addOfferToCompareGroups,
   clearCompareGroup,
   loadCompareGroups,
+  loadCompareOfferSnapshots,
   mergeOffersIntoCompareGroups,
   removeOfferFromCompareGroup,
 } from "@/features/compare/store";
@@ -47,7 +48,13 @@ export default function ComparePageClient() {
     async function load() {
       setLoading(true);
       const data = await getOffers({});
-      let nextAllOffers = data;
+      const snapshotOffers = loadCompareOfferSnapshots();
+      let nextAllOffers = [...data];
+      snapshotOffers.forEach((snapshotOffer) => {
+        if (!nextAllOffers.some((item) => String(item.id) === String(snapshotOffer.id))) {
+          nextAllOffers.push(snapshotOffer);
+        }
+      });
       if (cancelled) return;
 
       let nextGroups = loadCompareGroups();
@@ -58,7 +65,7 @@ export default function ComparePageClient() {
           .filter(Boolean)
           .map((id) => String(id));
         const incomingOffers = incomingIds
-          .map((id) => data.find((offer) => String(offer.id) === id))
+          .map((id) => nextAllOffers.find((offer) => String(offer.id) === id))
           .filter(Boolean) as Offer[];
         nextGroups = mergeOffersIntoCompareGroups(incomingOffers);
       }
@@ -72,7 +79,10 @@ export default function ComparePageClient() {
         if (response.ok) {
           const json = await response.json();
           const liveOffers = (json.offers || []) as Offer[];
-          nextAllOffers = [...data, ...liveOffers.filter((liveOffer) => !data.some((item) => item.id === liveOffer.id))];
+          nextAllOffers = [
+            ...nextAllOffers,
+            ...liveOffers.filter((liveOffer) => !nextAllOffers.some((item) => item.id === liveOffer.id)),
+          ];
         }
       }
 
