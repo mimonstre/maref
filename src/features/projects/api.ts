@@ -51,6 +51,12 @@ type OfferRow = {
   specs?: Record<string, string>;
 };
 
+function normalizeAvailability(value: string | null | undefined) {
+  if (!value) return "Disponibilite a confirmer";
+  if (value.toLowerCase() === "en stock") return "Disponible";
+  return value;
+}
+
 function mapOffer(row: OfferRow): Offer {
   const offer: Offer = {
     id: row.id,
@@ -62,7 +68,7 @@ function mapOffer(row: OfferRow): Offer {
     merchant: row.merchant,
     price: row.price,
     barredPrice: row.barred_price,
-    availability: row.availability,
+    availability: normalizeAvailability(row.availability),
     delivery: row.delivery,
     warranty: row.warranty,
     score: typeof row.score === "number" ? row.score : null,

@@ -325,7 +325,7 @@ export default function OfferDetailPage() {
           <span
             className={
               "text-xs font-semibold px-2.5 py-1 rounded-full " +
-              (offer.availability === "En stock"
+              (offer.availability === "Disponible"
                 ? "bg-blue-100 text-blue-800"
                 : "bg-yellow-100 text-yellow-700")
             }
@@ -815,7 +815,7 @@ export default function OfferDetailPage() {
                 : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300")
             }
           >
-            {isFav ? "Sauvegardee" : "Sauvegarder"}
+            {isFav ? "En favoris" : "Favoris"}
           </button>
 
           <button

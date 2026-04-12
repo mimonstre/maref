@@ -11,7 +11,7 @@ const BRAND_POOLS: Record<string, string[]> = {
 };
 
 const MERCHANTS = ["Darty", "Boulanger", "Fnac", "Amazon", "Cdiscount", "Electro Depot", "But", "Conforama"];
-const AVAILABILITIES = ["En stock", "Sous 48h", "Sous 5 jours"];
+const AVAILABILITIES = ["Disponible", "Sous 48h", "Sous 5 jours"];
 const WARRANTIES = ["2 ans", "3 ans", "5 ans"];
 const DELIVERIES = ["Gratuite", "9,99 EUR", "19,99 EUR"];
 

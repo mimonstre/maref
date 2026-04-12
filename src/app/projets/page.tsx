@@ -253,7 +253,7 @@ export default function ProjetsPage() {
                           ? "Cadrage"
                           : analysis.decisionStage === "comparing"
                             ? "Comparaison"
-                            : "Pret a trancher"}
+                            : "Arbitrage final"}
                     </p>
                     <p className="text-[0.7rem] text-gray-500 mt-1">{analysis.nextAction}</p>
                   </div>

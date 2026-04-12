@@ -39,7 +39,7 @@ function defaultForm(): AdminOfferForm {
     merchant: "Darty",
     price: "",
     barredPrice: "",
-    availability: "En stock",
+    availability: "Disponible",
     delivery: "Gratuite",
     warranty: "2 ans",
     sourceUrl: "",

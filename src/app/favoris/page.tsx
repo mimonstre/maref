@@ -39,7 +39,7 @@ export default function FavorisPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-bold">Favoris</h2>
-      <p className="text-sm text-gray-500">{favOffers.length} offre{favOffers.length > 1 ? "s" : ""} sauvegardee{favOffers.length > 1 ? "s" : ""}</p>
+      <p className="text-sm text-gray-500">{favOffers.length} offre{favOffers.length > 1 ? "s" : ""} en favoris</p>
 
       {loading ? (
         <div className="space-y-2.5">
@@ -57,7 +57,7 @@ export default function FavorisPage() {
         <EmptyState
           icon="?"
           title="Aucun favori"
-          description="Cette page n affiche que les offres que vous avez reellement sauvegardees."
+          description="Cette page n affiche que les offres que vous avez reellement ajoutees en favoris."
           action={() => router.push("/explorer")}
           actionLabel="Explorer"
         />

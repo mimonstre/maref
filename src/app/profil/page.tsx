@@ -6,6 +6,7 @@ import {
   Bot,
   FolderKanban,
   Heart,
+  MapPin,
   Medal,
   Settings,
   ShieldCheck,
@@ -19,6 +20,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { EmptyState, IncompleteDataWarning, LoadingSkeleton, NoDataBlock } from "@/components/shared/Score";
 import { getProfileStats } from "@/features/profile/api";
 import { computeProfileProgress, getProfileImpactText } from "@/features/profile/gamification";
+import { getUserLocation, saveUserLocation } from "@/lib/core/userSignals";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import { getUserProfile, upsertUserProfile } from "@/lib/services/offers";
 
@@ -28,6 +30,7 @@ const preferenceIcons = {
   Priorite: <ShieldCheck className="h-4 w-4 text-blue-700" />,
   Horizon: <Timer className="h-4 w-4 text-blue-700" />,
   "Tolerance risque": <TriangleAlert className="h-4 w-4 text-blue-700" />,
+  Localisation: <MapPin className="h-4 w-4 text-blue-700" />,
 };
 
 const defaultStats = {
@@ -47,6 +50,9 @@ export default function ProfilPage() {
   const [horizon, setHorizon] = useState("3-5 ans");
   const [usage, setUsage] = useState("Usage quotidien");
   const [risk, setRisk] = useState("Prudent");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [region, setRegion] = useState("");
   const [stats, setStats] = useState(defaultStats);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const saveMessage = useTimedMessage(3000);
@@ -73,6 +79,13 @@ export default function ProfilPage() {
         setHorizon(userProfile.horizon || "3-5 ans");
         setUsage(userProfile.usage || "Usage quotidien");
         setRisk(userProfile.risk || "Prudent");
+      }
+
+      const savedLocation = getUserLocation();
+      if (savedLocation) {
+        setCity(savedLocation.city || "");
+        setPostalCode(savedLocation.postalCode || "");
+        setRegion(savedLocation.region || "");
       }
 
       setProfileLoaded(true);
@@ -122,12 +135,14 @@ export default function ProfilPage() {
   const impactText = getProfileImpactText(priority);
 
   async function handleSavePreferences() {
-    const ok = await upsertUserProfile({ budget, priority, horizon, usage, risk });
+    const locationLabel = [city, postalCode, region].filter(Boolean).join(" - ");
+    const ok = await upsertUserProfile({ budget, priority, horizon, usage, risk, location: locationLabel || undefined });
     if (!ok) {
       saveMessage.showMessage("Impossible d enregistrer vos preferences pour le moment.");
       return;
     }
 
+    saveUserLocation({ city, postalCode, region });
     saveMessage.showMessage("Preferences enregistrees.");
     setEditing(false);
   }
@@ -358,6 +373,20 @@ export default function ProfilPage() {
                 </select>
               </div>
             ))}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-500">Ville</label>
+                <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-600" value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ex: Lille" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-500">Code postal</label>
+                <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-600" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="Ex: 59000" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-gray-500">Region</label>
+                <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-600" value={region} onChange={(event) => setRegion(event.target.value)} placeholder="Ex: Hauts-de-France" />
+              </div>
+            </div>
             <button
               onClick={handleSavePreferences}
               className="w-full rounded-lg bg-blue-700 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
@@ -373,6 +402,7 @@ export default function ProfilPage() {
               ["Priorite", priority],
               ["Horizon", horizon],
               ["Tolerance risque", risk],
+              ["Localisation", [city, postalCode, region].filter(Boolean).join(" - ") || "A completer"],
             ].map(([label, value]) => (
               <div
                 key={label}

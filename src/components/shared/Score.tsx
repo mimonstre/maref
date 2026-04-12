@@ -41,10 +41,10 @@ export function AxisBar({ label, value, onClick }: { label: string; value: numbe
 
 export function MimoCard({ text, compact = false }: { text: string; compact?: boolean }) {
   return (
-    <div className={"relative overflow-hidden rounded-3xl border border-blue-200/80 bg-gradient-to-br from-blue-50 via-white to-sky-100 shadow-[0_18px_40px_rgba(37,99,235,0.10)] " + (compact ? "p-3" : "p-5")}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(125,211,252,0.28),transparent_26%)]"></div>
-      <span className="absolute left-4 top-[-10px] rounded-full bg-gradient-to-r from-blue-700 to-sky-600 px-3 py-1 text-[0.68rem] font-bold text-white shadow-[0_12px_24px_rgba(37,99,235,0.24)]">Mimo</span>
-      <p className={"relative mt-3 text-gray-800 leading-relaxed " + (compact ? "text-xs" : "text-sm")}>{text}</p>
+    <div className={"relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 shadow-[0_18px_40px_rgba(15,23,42,0.08)] " + (compact ? "p-3 pt-11" : "p-5 pt-12")}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_28%)]"></div>
+      <span className="absolute left-4 top-4 rounded-full bg-gradient-to-r from-slate-900 to-blue-900 px-3 py-1 text-[0.68rem] font-bold text-white shadow-[0_12px_24px_rgba(15,23,42,0.20)]">Mimo</span>
+      <p className={"relative text-gray-800 leading-relaxed " + (compact ? "text-xs" : "text-sm")}>{text}</p>
     </div>
   );
 }

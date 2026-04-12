@@ -11,6 +11,9 @@ export type MimoContext = {
   preferredPriority?: string;
   hasProjects?: boolean;
   totalOffers?: number;
+  recentSearches?: string[];
+  recentViews?: string[];
+  location?: string;
 };
 
 export const ASSISTANT_SUGGESTIONS = [
@@ -78,8 +81,8 @@ const RESPONSE_MAP: Record<string, ResponseVariants> = {
 
   // --- Favoris ---
   favoris: [
-    "Vos offres sauvegardees sont accessibles dans la section Favoris. Conseil : sauvegardez plusieurs offres d une meme categorie pour les comparer sereinement avant de decider, sans perdre vos recherches.",
-    "Les favoris servent d espace de reflexion : sauvegardez les offres qui vous interessent, laissez reposer 24h, puis revenez les comparer. Les decisions prises apres une nuit de recul sont generalement meilleures.",
+    "Vos offres en favoris sont accessibles dans la section Favoris. Conseil : ajoutez plusieurs offres d une meme categorie pour les comparer sereinement avant de decider, sans perdre vos recherches.",
+    "Les favoris servent d espace de reflexion : ajoutez les offres qui vous interessent, laissez reposer 24h, puis revenez les comparer. Les decisions prises apres une nuit de recul sont generalement meilleures.",
   ],
 
   // --- Projet ---
@@ -257,6 +260,14 @@ function buildContextualPrefix(context: MimoContext, key: string): string {
     return "Avec ta priorite \"" + context.preferredPriority + "\", voici comment je vois les choses. ";
   }
 
+  if (key === "comparaison" && context.recentSearches && context.recentSearches.length > 0) {
+    return "Tes dernieres recherches tournent autour de " + context.recentSearches.slice(0, 2).join(" et ") + ". ";
+  }
+
+  if (key === "meilleur" && context.recentViews && context.recentViews.length > 0) {
+    return "Parmi tes consultations recentes, je garderais en tete " + context.recentViews.slice(0, 2).join(" et ") + ". ";
+  }
+
   return "";
 }
 
@@ -274,6 +285,14 @@ export function getMimoResponse(input: string, context?: MimoContext): string {
   }
 
   // Contextual fallback: mention projects or favs if available
+  if (context?.recentSearches && context.recentSearches.length > 0) {
+    return (
+      "Je n ai pas compris exactement la demande, mais vos recherches recentes portent sur " +
+      context.recentSearches.slice(0, 3).join(", ") +
+      ". Je peux vous aider a comparer ces familles, expliquer le score, ou vous recommander un prochain arbitrage."
+    );
+  }
+
   if (context?.projects && context.projects.length > 0) {
     const name = context.projects[0].name;
     return (

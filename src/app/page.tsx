@@ -6,7 +6,8 @@ import type { Project } from "@/features/projects/api";
 import DashboardPage from "@/features/home/DashboardPage";
 import LandingPage from "@/features/home/LandingPage";
 import { CATEGORIES, getCategoryIcon } from "@/lib/categories";
-import { getFavorites, getOffers } from "@/lib/queries";
+import { getFavorites, getOffers, getUserProfile, getViewHistory } from "@/lib/queries";
+import { getRecentSearchSignals, getUserLocation } from "@/lib/core/userSignals";
 import { supabase } from "@/lib/supabase";
 import { getProjectsWithOffers } from "@/features/projects/api";
 import type { Offer } from "@/lib/data";
@@ -19,14 +20,19 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
+  const [recentHistory, setRecentHistory] = useState<Awaited<ReturnType<typeof getViewHistory>>>([]);
+  const [recentSearches, setRecentSearches] = useState<ReturnType<typeof getRecentSearchSignals>>([]);
+  const [userLocationLabel, setUserLocationLabel] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadHome() {
-      const [offersData, favorites, projectData, topicResult] = await Promise.all([
+      const [offersData, favorites, projectData, topicResult, historyData, userProfile] = await Promise.all([
         getOffers({}),
         getFavorites(),
         getProjectsWithOffers(),
         supabase.from("forum_topics").select("*", { count: "exact", head: true }),
+        getViewHistory(),
+        getUserProfile(),
       ]);
 
       setOffers(offersData);
@@ -34,6 +40,15 @@ export default function HomePage() {
       setProjects(projectData.projects);
       setProjectOffers(projectData.projectOffers);
       setTopicCount(topicResult.count || 0);
+      setRecentHistory(historyData);
+      setRecentSearches(getRecentSearchSignals());
+      const localLocation = getUserLocation();
+      const locationLabel = localLocation
+        ? [localLocation.city, localLocation.postalCode, localLocation.region].filter(Boolean).join(" - ")
+        : typeof userProfile?.location === "string"
+          ? userProfile.location
+          : null;
+      setUserLocationLabel(locationLabel);
       setLoading(false);
     }
 
@@ -67,6 +82,9 @@ export default function HomePage() {
       favCount={favCount}
       topicCount={topicCount}
       loading={loading}
+      recentHistory={recentHistory}
+      recentSearches={recentSearches}
+      userLocationLabel={userLocationLabel}
     />
   );
 }

@@ -12,6 +12,7 @@ import { addOfferToCompareGroups } from "@/features/compare/store";
 import { addOfferToProject, getProjectsWithOffers, type Project } from "@/features/projects/api";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import { generateMimo } from "@/lib/mimo/engine";
+import { recordSearchSignal } from "@/lib/core/userSignals";
 import { averageOfferScore, getOfferDisplayScore, rankOffersByScore, toBaseOffer } from "@/lib/score/engine";
 import { getOffers } from "@/lib/queries";
 
@@ -109,6 +110,49 @@ export default function ExplorerPage() {
     void Promise.resolve().then(loadFilteredOffers);
   }, [activeCategory, activeSubcategory, search, sort]);
 
+  useEffect(() => {
+    if (!activeCategory && !activeSubcategory && search.trim().length < 2) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      const activeCategoryName = CATEGORIES.find((category) => category.id === activeCategory)?.name || null;
+      const activeSubcategoryName =
+        CATEGORIES.flatMap((category) => category.subs).find((subcategory) => subcategory.id === activeSubcategory)?.name || null;
+
+      if (activeSubcategoryName) {
+        recordSearchSignal({
+          label: activeSubcategoryName,
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          query: search || null,
+        });
+        return;
+      }
+
+      if (search.trim().length >= 2) {
+        recordSearchSignal({
+          label: search.trim(),
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          query: search.trim(),
+        });
+        return;
+      }
+
+      if (activeCategoryName) {
+        recordSearchSignal({
+          label: activeCategoryName,
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          query: null,
+        });
+      }
+    }, 450);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeCategory, activeSubcategory, search]);
+
   const activeCat = CATEGORIES.find((category) => category.id === activeCategory);
   const journey = deriveUserJourney(projects, projectOffers);
   const merchants = [...new Set(allOffers.map((offer) => offer.merchant))];
@@ -120,7 +164,7 @@ export default function ExplorerPage() {
     return offers.filter((offer) => {
       if (selectedBrand !== "all" && offer.brand !== selectedBrand) return false;
       if (selectedMerchant !== "all" && offer.merchant !== selectedMerchant) return false;
-      if (inStockOnly && offer.availability !== "En stock") return false;
+      if (inStockOnly && offer.availability !== "Disponible") return false;
       if (priceBand === "budget" && offer.price > 500) return false;
       if (priceBand === "mid" && (offer.price < 500 || offer.price > 1000)) return false;
       if (priceBand === "premium" && offer.price < 1000) return false;
@@ -382,7 +426,7 @@ export default function ExplorerPage() {
                 <option value="premium">1 000 EUR et plus</option>
               </select>
               <button onClick={() => setInStockOnly(!inStockOnly)} className={"rounded-xl px-3 py-2 text-xs font-semibold border transition-colors " + (inStockOnly ? "bg-blue-50 border-blue-300 text-blue-800" : "bg-white border-gray-200 text-gray-600")}>
-                {inStockOnly ? "En stock uniquement" : "Inclure toutes disponibilites"}
+                {inStockOnly ? "Disponibilite immediate" : "Toutes disponibilites"}
               </button>
             </div>
             {bestBuyAvailable && (

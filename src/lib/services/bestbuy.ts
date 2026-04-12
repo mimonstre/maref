@@ -143,7 +143,7 @@ function buildPefas(product: BestBuyProduct, price: number, regularPrice: number
     getNumber(product.customerReviewCount) ??
     getNumber(product.customerReviews?.count) ??
     0;
-  const onlineAvailability = product.onlineAvailabilityText || product.onlineAvailability ? "En stock" : "Disponibilité limitée";
+  const onlineAvailability = product.onlineAvailabilityText || product.onlineAvailability ? "Disponible" : "Disponibilite limitee";
   const discountRatio = regularPrice && regularPrice > price ? Math.min(1, (regularPrice - price) / regularPrice) : 0;
 
   const P = Math.round(Math.min(100, 45 + reviewAverage * 10 + Math.min(reviewCount / 40, 18)));
@@ -210,7 +210,7 @@ function mapBestBuyProductToOffer(product: BestBuyProduct, category: string, sub
     merchant: "Best Buy",
     price,
     barredPrice: regularPrice,
-    availability: product.onlineAvailability || product.onlineAvailabilityText ? "En stock" : "Disponibilité limitée",
+    availability: product.onlineAvailability || product.onlineAvailabilityText ? "Disponible" : "Disponibilite limitee",
     delivery: typeof product.shippingCost === "number" ? `Livraison ${product.shippingCost === 0 ? "gratuite" : `${product.shippingCost.toFixed(2)} USD`}` : "Voir Best Buy",
     warranty: "Voir Best Buy",
     score,

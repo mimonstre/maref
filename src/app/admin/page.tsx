@@ -229,7 +229,7 @@ export default function AdminPage() {
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Disponibilite</label>
               <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={form.availability} onChange={(e) => updateForm("availability", e.target.value)}>
-                {["En stock", "Sous 48h", "Sous 5 jours", "Sur commande", "Rupture"].map((availability) => (
+                {["Disponible", "Sous 48h", "Sous 5 jours", "Sur commande", "Rupture"].map((availability) => (
                   <option key={availability}>{availability}</option>
                 ))}
               </select>

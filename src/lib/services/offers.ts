@@ -49,6 +49,12 @@ async function getCurrentUserId() {
   return user?.id ?? null;
 }
 
+function normalizeAvailability(value: string | null | undefined) {
+  if (!value) return "Disponibilite a confirmer";
+  if (value.toLowerCase() === "en stock") return "Disponible";
+  return value;
+}
+
 function mapOffer(row: OfferRow): Offer {
   const offer: Offer = {
     id: row.id,
@@ -60,7 +66,7 @@ function mapOffer(row: OfferRow): Offer {
     merchant: row.merchant,
     price: row.price,
     barredPrice: row.barred_price,
-    availability: row.availability,
+    availability: normalizeAvailability(row.availability),
     delivery: row.delivery,
     warranty: row.warranty,
     score: typeof row.score === "number" ? row.score : null,
@@ -284,11 +290,20 @@ export async function getUserProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase.from('user_profiles').select('*').eq('user_id', user.id).single();
-  return data as { budget: string; priority: string; horizon: string; usage: string; risk: string; compare_count: number; guide_progress: Record<string, number> } | null;
+  return data as {
+    budget: string;
+    priority: string;
+    horizon: string;
+    usage: string;
+    risk: string;
+    location?: string | null;
+    compare_count: number;
+    guide_progress: Record<string, number>;
+  } | null;
 }
 
 export async function upsertUserProfile(profile: {
-  budget?: string; priority?: string; horizon?: string; usage?: string; risk?: string;
+  budget?: string; priority?: string; horizon?: string; usage?: string; risk?: string; location?: string;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;

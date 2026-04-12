@@ -9,8 +9,9 @@ import {
   type MimoContext,
 } from "@/features/assistant/content";
 import { getProjectsWithOffers } from "@/features/projects/api";
-import { getFavorites } from "@/lib/queries";
+import { getFavorites, getViewHistory } from "@/lib/queries";
 import type { UserDecisionProfile } from "@/lib/core";
+import { getRecentSearchSignals, getUserLocation } from "@/lib/core/userSignals";
 
 export default function AssistantPage() {
   const { user } = useAuth();
@@ -47,9 +48,10 @@ export default function AssistantPage() {
   useEffect(() => {
     async function loadContext() {
       try {
-        const [{ projects, projectOffers }, favIds] = await Promise.all([
+        const [{ projects, projectOffers }, favIds, history] = await Promise.all([
           getProjectsWithOffers(),
           getFavorites(),
+          getViewHistory(),
         ]);
 
         let profile: UserDecisionProfile | undefined;
@@ -78,6 +80,9 @@ const avgScore =
           };
         });
 
+        const recentSearches = getRecentSearchSignals().slice(0, 4).map((item) => item.label);
+        const location = getUserLocation();
+
         const ctx: MimoContext = {
           projects: projectsSummary,
           favCount: favIds.length,
@@ -85,6 +90,9 @@ const avgScore =
           preferredPriority: profile?.priority,
           hasProjects: projects.length > 0,
           totalOffers,
+          recentSearches,
+          recentViews: history.slice(0, 4).map((item) => item.product),
+          location: location ? [location.city, location.postalCode, location.region].filter(Boolean).join(" - ") : undefined,
         };
 
         setContext(ctx);
@@ -160,7 +168,10 @@ const avgScore =
     dynamicSuggestions.push("Analyse mon projet " + context.projects[0].name);
   }
   if (context.favCount && context.favCount > 0) {
-    dynamicSuggestions.push("Mes offres sauvegardees");
+    dynamicSuggestions.push("Mes offres favorites");
+  }
+  if (context.recentSearches && context.recentSearches.length > 0) {
+    dynamicSuggestions.push("Que penses-tu de mes dernieres recherches ?");
   }
   dynamicSuggestions.push("Quelle est la meilleure offre ?");
 
