@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { CATEGORIES } from "@/lib/categories";
 import { computeScore, getScoreStatus } from "@/lib/score";
-import { getAdminOffers, deleteAdminOffer, saveAdminOffer } from "@/features/admin/api";
+import { getAdminOffers, deleteAdminOffer, importAdminOffers, saveAdminOffer } from "@/features/admin/api";
+import { buildDemoOffersCsv, parseOffersCsv } from "@/features/admin/csv";
 import { EMPTY_ADMIN_FORM, ADMIN_SUBCATEGORIES, getAdminFormFromOffer, getNextAdminForm } from "@/features/admin/form";
 import type { AdminOffer, AdminOfferForm } from "@/features/admin/types";
 
@@ -21,6 +22,7 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   async function loadOffers() {
     setLoading(true);
@@ -79,6 +81,39 @@ export default function AdminPage() {
     setForm(getAdminFormFromOffer(offer));
     setEditId(offer.id);
     setTab("edit");
+  }
+
+  async function handleCsvImport(file: File) {
+    setImporting(true);
+    setMessage("");
+
+    try {
+      const text = await file.text();
+      const forms = parseOffersCsv(text);
+      const result = await importAdminOffers(forms);
+
+      if (!result.success) {
+        setMessage("Erreur: " + result.errorMessage);
+      } else {
+        setMessage(result.imported + " offres importees");
+        await loadOffers();
+      }
+    } catch (error) {
+      setMessage("Erreur: " + (error instanceof Error ? error.message : "Import impossible"));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function handleDownloadDemoCsv() {
+    const csv = buildDemoOffersCsv();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "maref-demo-offers.csv";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   const filtered = search
@@ -329,6 +364,27 @@ export default function AdminPage() {
       <div className="flex gap-2">
         <button onClick={() => { setForm(EMPTY_ADMIN_FORM); setEditId(null); setTab("add"); }} className="flex-1 bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 transition-colors shadow-md text-sm">
           + Ajouter une offre
+        </button>
+        <label className="flex-1 cursor-pointer bg-white border border-gray-200 text-gray-700 font-semibold py-3 rounded-xl hover:border-blue-300 transition-colors shadow-sm text-sm text-center">
+          {importing ? "Import..." : "Importer CSV"}
+          <input
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) {
+                void handleCsvImport(file);
+              }
+              event.currentTarget.value = "";
+            }}
+          />
+        </label>
+        <button
+          onClick={handleDownloadDemoCsv}
+          className="flex-1 bg-blue-50 text-blue-800 font-semibold py-3 rounded-xl hover:bg-blue-100 transition-colors shadow-sm text-sm"
+        >
+          Telecharger le CSV demo
         </button>
       </div>
 

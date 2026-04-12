@@ -2,12 +2,7 @@ import { computeScore, generateShortMimo, getScoreStatus } from "@/lib/score";
 import { supabase } from "@/lib/supabase";
 import type { AdminOffer, AdminOfferForm } from "./types";
 
-export async function getAdminOffers(): Promise<AdminOffer[]> {
-  const { data } = await supabase.from("offers").select("*").order("created_at", { ascending: false });
-  return (data || []) as AdminOffer[];
-}
-
-export async function saveAdminOffer(form: AdminOfferForm, editId?: string | null) {
+function buildOfferRow(form: AdminOfferForm) {
   const p = parseInt(form.pefas_p) || 70;
   const e = parseInt(form.pefas_e) || 70;
   const f = parseInt(form.pefas_f) || 70;
@@ -17,7 +12,7 @@ export async function saveAdminOffer(form: AdminOfferForm, editId?: string | nul
   const status = getScoreStatus(score);
   const reliabilityScore = form.reliabilityScore ? parseInt(form.reliabilityScore) : null;
 
-  const row = {
+  return {
     product: form.product,
     brand: form.brand,
     model: form.model || form.brand.substring(0, 2).toUpperCase() + "-" + Math.floor(Math.random() * 9000 + 1000),
@@ -46,6 +41,15 @@ export async function saveAdminOffer(form: AdminOfferForm, editId?: string | nul
     reasons: form.reasons.split("\n").filter((reason) => reason.trim()),
     vigilances: form.vigilances.split("\n").filter((vigilance) => vigilance.trim()),
   };
+}
+
+export async function getAdminOffers(): Promise<AdminOffer[]> {
+  const { data } = await supabase.from("offers").select("*").order("created_at", { ascending: false });
+  return (data || []) as AdminOffer[];
+}
+
+export async function saveAdminOffer(form: AdminOfferForm, editId?: string | null) {
+  const row = buildOfferRow(form);
 
   if (editId) {
     const { error } = await supabase.from("offers").update(row).eq("id", editId);
@@ -61,4 +65,21 @@ export async function deleteAdminOffer(offerId: string) {
   await supabase.from("project_offers").delete().eq("offer_id", offerId);
   const { error } = await supabase.from("offers").delete().eq("id", offerId);
   return !error;
+}
+
+export async function importAdminOffers(forms: AdminOfferForm[]) {
+  if (forms.length === 0) {
+    return { success: false, imported: 0, errorMessage: "Aucune ligne a importer" };
+  }
+
+  const rows = forms
+    .filter((form) => form.product && form.brand && form.price)
+    .map((form) => buildOfferRow(form));
+
+  if (rows.length === 0) {
+    return { success: false, imported: 0, errorMessage: "Aucune ligne valide a importer" };
+  }
+
+  const { error } = await supabase.from("offers").insert(rows);
+  return { success: !error, imported: error ? 0 : rows.length, errorMessage: error?.message || null };
 }

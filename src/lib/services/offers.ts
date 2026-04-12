@@ -1,4 +1,5 @@
 import { getOfferDataState, type NotificationItem, type Offer } from "@/lib/core";
+import { getDemoOfferById, getFilteredDemoOffers } from "@/lib/demo/offers";
 import { supabase } from "./supabase";
 
 type OfferRow = {
@@ -121,7 +122,11 @@ export async function getOffers(filters?: {
   const { data, error } = await query;
   if (error) {
     console.error("Erreur chargement offres:", error);
-    return [];
+    return getFilteredDemoOffers(filters);
+  }
+
+  if (!data || data.length === 0) {
+    return getFilteredDemoOffers(filters);
   }
 
   return data.map((item) => mapOffer(item as OfferRow));
@@ -129,7 +134,7 @@ export async function getOffers(filters?: {
 
 export async function getOfferById(id: string) {
   const { data, error } = await supabase.from("offers").select("*").eq("id", id).single();
-  if (error || !data) return null;
+  if (error || !data) return getDemoOfferById(id);
   return mapOffer(data as OfferRow);
 }
 
