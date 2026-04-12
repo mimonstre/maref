@@ -75,7 +75,7 @@ export default function GuidePage() {
               setQuizStep(0);
               setQuizAnswers([]);
             }}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-900 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <polyline points="15 18 9 12 15 6" />
@@ -92,14 +92,14 @@ export default function GuidePage() {
               {pct >= 80 ? "Excellent, vous maitrisez bien le sujet." : pct >= 60 ? "Bonne base, mais quelques points restent a revoir." : "Continuez le guide puis retentez le quiz."}
             </p>
             {passed && (
-              <span className="inline-block mt-3 text-[0.7rem] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+            <span className="inline-block mt-3 text-[0.7rem] font-semibold text-blue-900 bg-slate-100 border border-slate-200 px-3 py-1 rounded-full">
                 Quiz valide
               </span>
             )}
           </div>
 
-          <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
-            <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
+          <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <span className="absolute -top-2.5 left-4 bg-blue-900 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
             <p className="text-sm text-gray-800 mt-2">
               {pct >= 80 ? "Bravo. Vous pouvez passer au module suivant ou appliquer ces notions dans vos projets." : "Revenez sur le module correspondant, puis refaites le quiz a froid."}
             </p>
@@ -111,7 +111,7 @@ export default function GuidePage() {
                 setQuizStep(0);
                 setQuizAnswers([]);
               }}
-              className="flex-1 bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 transition-colors text-sm"
+              className="flex-1 bg-blue-900 text-white font-semibold py-2.5 rounded-xl hover:bg-slate-950 transition-colors text-sm"
             >
               Recommencer
             </button>
@@ -141,7 +141,7 @@ export default function GuidePage() {
             setQuizStep(0);
             setQuizAnswers([]);
           }}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors"
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-900 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <polyline points="15 18 9 12 15 6" />
@@ -151,11 +151,11 @@ export default function GuidePage() {
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">Question {quizStep + 1} / {quiz.questions.length}</span>
-          <span className="text-xs font-semibold text-blue-700">{quiz.title}</span>
+          <span className="text-xs font-semibold text-blue-900">{quiz.title}</span>
         </div>
 
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${(quizStep / quiz.questions.length) * 100}%` }}></div>
+          <div className="h-full bg-blue-900 rounded-full transition-all" style={{ width: `${(quizStep / quiz.questions.length) * 100}%` }}></div>
         </div>
 
         <h3 className="font-bold text-lg">{question.q}</h3>
@@ -193,7 +193,7 @@ export default function GuidePage() {
           Retour au guide
         </button>
 
-        <div className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-2xl p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-br from-blue-950 to-blue-800 rounded-2xl p-6 text-white shadow-lg">
           <p className="text-3xl mb-3">{activeGuideModule.icon}</p>
           <h2 className="text-xl font-bold">{activeGuideModule.title}</h2>
           <p className="text-blue-200 text-sm mt-1">{activeGuideModule.desc}</p>
@@ -208,8 +208,8 @@ export default function GuidePage() {
           <p className="text-[0.7rem] text-blue-200 mt-1">{currentProgress}% complete</p>
         </div>
 
-        <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
-          <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
+        <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <span className="absolute -top-2.5 left-4 bg-blue-900 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
           <p className="text-sm text-gray-800 mt-2">Ce module vous aide a comprendre un aspect cle du produit. Chaque lecon est courte, concrete et directement applicable.</p>
         </div>
 
@@ -230,7 +230,7 @@ export default function GuidePage() {
                     {!completed && (
                       <button
                         onClick={() => markLessonComplete(activeGuideModule.id, index, totalLessons)}
-                        className="mt-2 text-xs font-semibold text-blue-700 border border-blue-300 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors"
+                        className="mt-2 text-xs font-semibold text-blue-900 border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1 rounded-lg transition-colors"
                       >
                         Marquer comme lu
                       </button>
@@ -257,7 +257,7 @@ export default function GuidePage() {
         <p className="text-sm text-gray-500 mt-1">Apprenez a mieux decider. Chaque module vous rend plus autonome.</p>
       </div>
 
-      <div className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
+      <div className="bg-gradient-to-br from-blue-950 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
         <div className="flex items-center justify-between mb-2">
           <span className="font-bold">Votre progression</span>
           <span className="text-2xl font-extrabold">{totalProgress}%</span>
@@ -270,8 +270,8 @@ export default function GuidePage() {
         </p>
       </div>
 
-      <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
+      <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <span className="absolute -top-2.5 left-4 bg-blue-900 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
         <p className="text-sm text-gray-800 mt-2">Le guide est votre allie pour comprendre comment MAREF fonctionne. Commencez par les modules en cours puis validez vos acquis avec les quiz.</p>
       </div>
 

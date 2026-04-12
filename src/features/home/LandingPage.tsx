@@ -10,23 +10,23 @@ type LandingPageProps = {
 
 const featureCards = [
   {
-    title: "Score contextualise",
-    description: "Le score n'apparait que si les donnees sont suffisantes, avec une lecture claire et exploitable.",
+    title: "Comprendre vite",
+    description: "MAREF transforme des fiches confuses en lecture claire, utile et comparable.",
     icon: <BarChart3 className="h-5 w-5 text-blue-900" />,
   },
   {
-    title: "Mimo prudent",
-    description: "L'assistant explique les limites de l'information et refuse les raccourcis trompeurs.",
+    title: "Mimo vous guide",
+    description: "L'assistant explique, nuance et aide a arbitrer selon votre contexte reel.",
     icon: <Bot className="h-5 w-5 text-blue-900" />,
   },
   {
-    title: "Projet decisionnel",
-    description: "Chaque short-list vit dans un projet, avec un contexte, un objectif et un budget reel.",
+    title: "Projet d'achat",
+    description: "Vous regroupez vos options dans un projet avec budget, objectif et shortlist.",
     icon: <FolderKanban className="h-5 w-5 text-blue-900" />,
   },
   {
-    title: "Comparaison multi-familles",
-    description: "Les produits sont compares par famille pour garder une analyse lisible et logique.",
+    title: "Comparer proprement",
+    description: "Chaque famille de produits garde sa propre comparaison pour rester lisible.",
     icon: <Scale className="h-5 w-5 text-blue-900" />,
   },
 ];
@@ -42,11 +42,10 @@ export default function LandingPage({ categoryCards }: LandingPageProps) {
               Intelligence decisionnelle honnete
             </div>
             <h1 className="section-title mt-5 max-w-3xl text-4xl font-black tracking-tight md:text-5xl">
-              Une interface qui aide vraiment a choisir, pas juste a naviguer.
+              Comprendre, comparer et choisir le bon produit sans se perdre.
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-blue-100/90 md:text-base">
-              MAREF structure l&apos;achat comme un systeme de decision. Les donnees sont tracees, les limites sont visibles et
-              les recommandations n&apos;existent que quand elles peuvent etre justifiees.
+              MAREF vous aide a prendre une bonne decision d&apos;achat. Vous explorez, mettez en favoris, regroupez dans un projet, comparez et tranchez avec une lecture claire.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
@@ -71,19 +70,17 @@ export default function LandingPage({ categoryCards }: LandingPageProps) {
                 <div>
                   <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-800">Signal principal</p>
                   <h2 className="mt-2 text-xl font-extrabold text-slate-950">Decider avec contexte</h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Projet, budget, axes PEFAS, comparaison par famille et niveau de fiabilite visible dans chaque ecran.
-                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Un parcours simple : trouver, filtrer, comparer, decider.</p>
                 </div>
               </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-2xl bg-blue-100 p-3">
                   <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-blue-900/80">Ce qui compte</p>
-                  <p className="mt-2 text-sm text-slate-700">Des arbitrages clairs, des donnees tracables et un parcours decisionnel lisible.</p>
+                  <p className="mt-2 text-sm text-slate-700">Voir rapidement ce qui vaut le coup et ce qui ne vaut pas votre temps.</p>
                 </div>
                 <div className="rounded-2xl bg-slate-100 p-3">
                   <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-500">Ce qui est retire</p>
-                  <p className="mt-2 text-sm text-slate-700">Les compteurs decoratifs, les faux signaux de volume et les metriques qui n&apos;aident pas a choisir.</p>
+                  <p className="mt-2 text-sm text-slate-700">Le bruit, les chiffres decoratifs et les signaux qui compliquent la decision.</p>
                 </div>
               </div>
             </div>
@@ -92,7 +89,7 @@ export default function LandingPage({ categoryCards }: LandingPageProps) {
               <div className="premium-panel rounded-[26px] p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-blue-900" />
-                  <p className="text-sm font-bold text-slate-900">Ce que MAREF refuse</p>
+                  <p className="text-sm font-bold text-slate-900">Sans MAREF</p>
                 </div>
                 <ul className="space-y-2 text-sm text-slate-600">
                   <li>Promesses sans source</li>
@@ -103,7 +100,7 @@ export default function LandingPage({ categoryCards }: LandingPageProps) {
               <div className="premium-panel rounded-[26px] p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-blue-900" />
-                  <p className="text-sm font-bold text-slate-900">Ce que MAREF apporte</p>
+                  <p className="text-sm font-bold text-slate-900">Avec MAREF</p>
                 </div>
                 <ul className="space-y-2 text-sm text-slate-600">
                   <li>Familles de comparaison claires</li>
@@ -121,7 +118,7 @@ export default function LandingPage({ categoryCards }: LandingPageProps) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-800">Ce que le produit fait vraiment</p>
-            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Une experience plus proche d&apos;un cockpit que d&apos;un catalogue</h2>
+            <h2 className="section-title mt-2 text-2xl font-black text-slate-950">Ce que vous pouvez faire en quelques minutes</h2>
             </div>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">

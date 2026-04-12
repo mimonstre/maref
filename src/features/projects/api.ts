@@ -51,6 +51,14 @@ type OfferRow = {
   specs?: Record<string, string>;
 };
 
+async function getCurrentUserId() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user?.id ?? null;
+}
+
 function normalizeAvailability(value: string | null | undefined) {
   if (!value) return "Disponibilite a confirmer";
   if (value.toLowerCase() === "en stock") return "Disponible";
@@ -100,7 +108,10 @@ function mapOffer(row: OfferRow): Offer {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const { data } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
+  const userId = await getCurrentUserId();
+  if (!userId) return [];
+
+  const { data } = await supabase.from("projects").select("*").eq("user_id", userId).order("created_at", { ascending: false });
   return (data || []) as Project[];
 }
 
@@ -108,7 +119,12 @@ export async function getProjectsWithOffers(): Promise<{
   projects: Project[];
   projectOffers: Record<string, ProjectOffer[]>;
 }> {
-  const { data: projectsData } = await supabase.from("projects").select("*").order("created_at", { ascending: false });
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return { projects: [], projectOffers: {} };
+  }
+
+  const { data: projectsData } = await supabase.from("projects").select("*").eq("user_id", userId).order("created_at", { ascending: false });
   const projects = (projectsData || []) as Project[];
 
   if (projects.length === 0) {

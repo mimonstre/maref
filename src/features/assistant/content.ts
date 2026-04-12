@@ -271,6 +271,42 @@ function buildContextualPrefix(context: MimoContext, key: string): string {
   return "";
 }
 
+function buildAnalyticalFallback(input: string, context?: MimoContext) {
+  const fragments: string[] = [];
+
+  if (context?.projects && context.projects.length > 0) {
+    const project = context.projects[0];
+    fragments.push(
+      `Votre projet le plus recent est ${project.name} avec ${project.offers} offre${project.offers > 1 ? "s" : ""}.`,
+    );
+  }
+
+  if (context?.recentSearches && context.recentSearches.length > 0) {
+    fragments.push(`Vos recherches recentes tournent autour de ${context.recentSearches.slice(0, 2).join(" et ")}.`);
+  }
+
+  if (context?.recentViews && context.recentViews.length > 0) {
+    fragments.push(`Vos dernieres fiches consultees incluent ${context.recentViews.slice(0, 2).join(" et ")}.`);
+  }
+
+  if (context?.preferredPriority) {
+    fragments.push(`Votre priorite declaree est ${context.preferredPriority.toLowerCase()}.`);
+  }
+
+  const detectedNeed = input
+    .replace(/[?!.]/g, "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 10)
+    .join(" ");
+
+  return (
+    (fragments.length > 0 ? fragments.join(" ") + " " : "") +
+    "Je peux traiter cette demande, mais il me faut un angle plus explicite. " +
+    `Si vous parlez de "${detectedNeed}", dites-moi si vous voulez : comprendre, comparer, verifier le risque, ou choisir la meilleure option selon votre contexte.`
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -302,7 +338,7 @@ export function getMimoResponse(input: string, context?: MimoContext): string {
     );
   }
 
-  return "Je n ai pas compris exactement votre question. Essayez de me demander : le score, un axe PEFAS (P/E/F/A/S), la comparaison, vos favoris, ou des conseils budget. Je suis la pour ca.";
+  return buildAnalyticalFallback(input, context);
 }
 
 export function getMimoContextualResponse(input: string, context: MimoContext): string {

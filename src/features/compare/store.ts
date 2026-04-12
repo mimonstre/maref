@@ -30,17 +30,21 @@ export function saveCompareGroups(groups: CompareGroup[]) {
 }
 
 export function addOfferToCompareGroups(offer: Offer) {
-  const groups = loadCompareGroups();
+  const offerId = String(offer.id);
+  const groups = loadCompareGroups().map((group) => ({
+    ...group,
+    offerIds: Array.from(new Set(group.offerIds.map((id) => String(id)))),
+  }));
   const family = getOfferCompareFamily(offer);
   const existingGroup = groups.find((group) => group.key === family.key);
 
   if (!existingGroup) {
-    const nextGroups = [{ ...family, offerIds: [offer.id], updatedAt: new Date().toISOString() }, ...groups];
+    const nextGroups = [{ ...family, offerIds: [offerId], updatedAt: new Date().toISOString() }, ...groups];
     saveCompareGroups(nextGroups);
     return { status: "added" as const, family };
   }
 
-  if (existingGroup.offerIds.includes(offer.id)) {
+  if (existingGroup.offerIds.includes(offerId)) {
     return { status: "exists" as const, family };
   }
 
@@ -50,7 +54,7 @@ export function addOfferToCompareGroups(offer: Offer) {
 
   const nextGroups = groups.map((group) =>
     group.key === family.key
-      ? { ...group, offerIds: [...group.offerIds, offer.id], updatedAt: new Date().toISOString() }
+      ? { ...group, offerIds: [...group.offerIds, offerId], updatedAt: new Date().toISOString() }
       : group,
   );
   saveCompareGroups(nextGroups);

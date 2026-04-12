@@ -34,7 +34,7 @@ export function AxisBar({ label, value, onClick }: { label: string; value: numbe
       <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className={"h-full rounded-full transition-all duration-700 " + color} style={{ width: value + "%" }}></div>
       </div>
-      <span className={"w-8 text-xs font-bold text-right " + (value >= 58 ? "text-blue-700" : value >= 42 ? "text-yellow-600" : "text-orange-600")}>{value}</span>
+      <span className={"w-8 text-xs font-bold text-right " + (value >= 91 ? "text-green-700" : value >= 76 ? "text-green-600" : value >= 61 ? "text-yellow-600" : value >= 41 ? "text-orange-600" : "text-red-600")}>{value}</span>
     </div>
   );
 }
@@ -58,7 +58,7 @@ export function EmptyState({ icon, title, description, action, actionLabel }: {
       <h3 className="mb-1 font-bold text-slate-700">{title}</h3>
       <p className="mb-4 text-sm text-slate-500">{description}</p>
       {action && actionLabel && (
-        <button onClick={action} className="rounded-xl bg-gradient-to-r from-blue-700 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition-all hover:translate-y-[-1px] hover:from-blue-800 hover:to-sky-700">
+        <button onClick={action} className="rounded-xl bg-gradient-to-r from-blue-950 to-blue-800 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(15,23,42,0.22)] transition-all hover:translate-y-[-1px] hover:from-slate-950 hover:to-blue-900">
           {actionLabel}
         </button>
       )}
@@ -95,7 +95,7 @@ export function LoadingSkeleton({ count = 3, type = "card" }: { count?: number; 
 export function Toast({ message }: { message: string }) {
   if (!message) return null;
   return (
-    <div className="fixed left-1/2 top-20 z-50 -translate-x-1/2 animate-fade-in rounded-2xl bg-gradient-to-r from-blue-700 to-sky-600 px-4 py-2 text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.24)]">
+    <div className="fixed left-1/2 top-20 z-50 -translate-x-1/2 animate-fade-in rounded-2xl bg-gradient-to-r from-blue-950 to-blue-800 px-4 py-2 text-sm font-medium text-white shadow-[0_18px_40px_rgba(15,23,42,0.24)]">
       {message}
     </div>
   );

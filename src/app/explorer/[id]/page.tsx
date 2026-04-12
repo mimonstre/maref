@@ -64,6 +64,8 @@ export default function OfferDetailPage() {
   useEffect(() => {
     async function loadOfferPage() {
       setLoading(true);
+      setOffer(null);
+      setAlternatives([]);
 
       const offerId = String(params.id);
       let currentOffer = await getOfferById(offerId);

@@ -41,7 +41,6 @@ type DashboardPageProps = {
   projects: Project[];
   projectOffers: Record<string, Offer[]>;
   favCount: number;
-  topicCount: number;
   loading: boolean;
   recentHistory: HistoryOffer[];
   recentSearches: SearchSignal[];
@@ -105,7 +104,6 @@ export default function DashboardPage({
   projects,
   projectOffers,
   favCount,
-  topicCount,
   loading,
   recentHistory,
   recentSearches,
@@ -113,6 +111,12 @@ export default function DashboardPage({
 }: DashboardPageProps) {
   const journey = deriveUserJourney(projects, projectOffers);
   const recommendationPool = getRecommendationPool(offers, recentSearches);
+  const totalProjectOffers = Object.values(projectOffers).reduce((acc, items) => acc + items.length, 0);
+  const trackedBrands = new Set(
+    Object.values(projectOffers)
+      .flat()
+      .map((offer) => offer.brand),
+  ).size;
 
   const bestProject = projects
     .map((project) => ({
@@ -126,8 +130,7 @@ export default function DashboardPage({
         existingOffers: projectOffers[project.id] || [],
       }),
     }))
-    .filter((item) => item.analysis.totalOffers > 0)
-    .sort((a, b) => (b.analysis.averageScore || 0) - (a.analysis.averageScore || 0))[0];
+    .filter((item) => item.analysis.totalOffers > 0)[0];
 
   const bestProjectOffers = bestProject ? projectOffers[bestProject.project.id] || [] : [];
   const projectTotalCost = bestProjectOffers.reduce((acc, offer) => acc + offer.price, 0);
@@ -174,12 +177,12 @@ export default function DashboardPage({
               <p className="mt-3 text-3xl font-black">{projects.length}</p>
             </div>
             <div className="rounded-[26px] bg-white/12 p-4 backdrop-blur-sm">
-              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Discussions</p>
-              <p className="mt-3 text-3xl font-black">{topicCount}</p>
+              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Offres suivies</p>
+              <p className="mt-3 text-3xl font-black">{totalProjectOffers}</p>
             </div>
             <div className="rounded-[26px] bg-white/12 p-4 backdrop-blur-sm">
-              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Etape</p>
-              <p className="mt-3 text-3xl font-black">{journey.progress}/5</p>
+              <p className="text-[0.72rem] uppercase tracking-[0.2em] text-blue-100/80">Marques</p>
+              <p className="mt-3 text-3xl font-black">{trackedBrands}</p>
             </div>
           </div>
         </div>
@@ -240,8 +243,10 @@ export default function DashboardPage({
                 <p className="mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-slate-500">Cout total</p>
               </div>
               <div className="premium-card rounded-[24px] p-4 text-center">
-                <p className="text-base font-black text-blue-900">{bestProject.analysis.bestOffer ? bestProject.analysis.bestOffer.brand : "-"}</p>
-                <p className="mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-slate-500">Leader</p>
+                <p className="text-base font-black text-blue-900">
+                  {Array.from(new Set(bestProjectOffers.map((offer) => offer.brand))).slice(0, 3).join(", ") || "-"}
+                </p>
+                <p className="mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-slate-500">Marques</p>
               </div>
             </div>
           </div>
@@ -300,7 +305,7 @@ export default function DashboardPage({
             <NoDataBlock title="Aucune consultation recente" description="Ouvrez quelques fiches produit et votre historique apparaitra ici automatiquement." />
           ) : (
             <div className="space-y-3">
-              {recentHistory.slice(0, 5).map((offer) => (
+              {Array.from(new Map(recentHistory.map((offer) => [offer.offer_id, offer])).values()).slice(0, 5).map((offer) => (
                 <Link key={offer.history_id || offer.offer_id} href={`/explorer/${offer.offer_id}`} className="premium-card group flex gap-4 rounded-[24px] p-4 transition-all hover:translate-y-[-2px]">
                   <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] bg-blue-100 text-2xl">
                     {getCategoryIcon(offer.category)}

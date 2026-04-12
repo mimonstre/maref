@@ -8,7 +8,6 @@ import LandingPage from "@/features/home/LandingPage";
 import { CATEGORIES, getCategoryIcon } from "@/lib/categories";
 import { getFavorites, getOffers, getUserProfile, getViewHistory } from "@/lib/queries";
 import { getRecentSearchSignals, getUserLocation } from "@/lib/core/userSignals";
-import { supabase } from "@/lib/supabase";
 import { getProjectsWithOffers } from "@/features/projects/api";
 import type { Offer } from "@/lib/data";
 
@@ -16,7 +15,6 @@ export default function HomePage() {
   const { user, loading: authLoading } = useAuth();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [favCount, setFavCount] = useState(0);
-  const [topicCount, setTopicCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectOffers, setProjectOffers] = useState<Record<string, Offer[]>>({});
@@ -26,11 +24,10 @@ export default function HomePage() {
 
   useEffect(() => {
     async function loadHome() {
-      const [offersData, favorites, projectData, topicResult, historyData, userProfile] = await Promise.all([
+      const [offersData, favorites, projectData, historyData, userProfile] = await Promise.all([
         getOffers({}),
         getFavorites(),
         getProjectsWithOffers(),
-        supabase.from("forum_topics").select("*", { count: "exact", head: true }),
         getViewHistory(),
         getUserProfile(),
       ]);
@@ -39,7 +36,6 @@ export default function HomePage() {
       setFavCount(favorites.length);
       setProjects(projectData.projects);
       setProjectOffers(projectData.projectOffers);
-      setTopicCount(topicResult.count || 0);
       setRecentHistory(historyData);
       setRecentSearches(getRecentSearchSignals());
       const localLocation = getUserLocation();
@@ -80,7 +76,6 @@ export default function HomePage() {
       projects={projects}
       projectOffers={projectOffers}
       favCount={favCount}
-      topicCount={topicCount}
       loading={loading}
       recentHistory={recentHistory}
       recentSearches={recentSearches}

@@ -6,20 +6,18 @@ export type ScoredOffer<T extends Offer = Offer> = T & {
 };
 
 export function getScoreColorClass(score: number) {
-  if (score >= 85) return "bg-[#163a74]";
-  if (score >= 72) return "bg-[#1f4b8f]";
-  if (score >= 58) return "bg-[#2f68b1]";
-  if (score >= 42) return "bg-yellow-500";
-  if (score >= 25) return "bg-orange-500";
+  if (score >= 91) return "bg-green-700";
+  if (score >= 76) return "bg-green-500";
+  if (score >= 61) return "bg-yellow-500";
+  if (score >= 41) return "bg-orange-500";
   return "bg-red-600";
 }
 
 export function getScoreStatus(score: number) {
-  if (score >= 85) return { label: "Excellent choix", className: "bg-blue-100 text-[#163a74]", color: "#163a74" };
-  if (score >= 72) return { label: "Très bon choix", className: "bg-blue-50 text-[#1f4b8f]", color: "#1f4b8f" };
-  if (score >= 58) return { label: "Bon choix", className: "bg-slate-100 text-[#2f68b1]", color: "#2f68b1" };
-  if (score >= 42) return { label: "A surveiller", className: "bg-yellow-100 text-yellow-700", color: "#e6a817" };
-  if (score >= 25) return { label: "Risque", className: "bg-orange-100 text-orange-700", color: "#d4652a" };
+  if (score >= 91) return { label: "Excellent choix", className: "bg-green-100 text-green-800", color: "#166534" };
+  if (score >= 76) return { label: "Tres bon choix", className: "bg-green-50 text-green-700", color: "#16a34a" };
+  if (score >= 61) return { label: "Bon choix", className: "bg-yellow-100 text-yellow-700", color: "#ca8a04" };
+  if (score >= 41) return { label: "A surveiller", className: "bg-orange-100 text-orange-700", color: "#ea580c" };
   return { label: "Peu pertinent", className: "bg-red-100 text-red-700", color: "#c0392b" };
 }
 
@@ -126,9 +124,9 @@ export function averageOfferScore(offers: Offer[], context?: ProjectDecisionCont
 
 export function generateShortMimo(score: number | null) {
   if (score === null) return "Score indisponible : donnees insuffisantes pour resumer cette offre.";
-  if (score >= 85) return "Offre solide, bien positionnee pour votre profil.";
-  if (score >= 72) return "Bon rapport qualite-prix-fiabilite dans votre contexte.";
-  if (score >= 58) return "Offre correcte, des alternatives existent.";
-  if (score >= 42) return "Quelques points a verifier avant de decider.";
+  if (score >= 91) return "Offre de reference, tres bien positionnee pour votre profil.";
+  if (score >= 76) return "Offre solide avec un bon alignement sur votre contexte.";
+  if (score >= 61) return "Offre correcte, a comparer avec une ou deux alternatives.";
+  if (score >= 41) return "Plusieurs points restent a verifier avant de decider.";
   return "Attention, plusieurs signaux meritent votre vigilance.";
 }

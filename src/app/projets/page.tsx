@@ -107,7 +107,7 @@ export default function ProjetsPage() {
     <div className="space-y-5">
       <Toast message={message} />
 
-      <div className="bg-gradient-to-br from-blue-700 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
+      <div className="bg-gradient-to-br from-blue-950 to-blue-800 rounded-2xl p-5 text-white shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold">Vos projets</h2>
@@ -117,7 +117,7 @@ export default function ProjetsPage() {
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="text-sm font-semibold bg-white text-blue-800 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-sm"
+            className="text-sm font-semibold bg-white text-blue-900 px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors shadow-sm"
           >
             {showForm ? "Annuler" : "+ Creer"}
           </button>
@@ -142,11 +142,11 @@ export default function ProjetsPage() {
         <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3 shadow-sm animate-fade-in-up">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Nom du projet *</label>
-            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" placeholder="Ex: Cuisine complete" value={formName} onChange={(event) => setFormName(event.target.value)} />
+            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900" placeholder="Ex: Cuisine complete" value={formName} onChange={(event) => setFormName(event.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Categorie</label>
-            <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={formCategory} onChange={(event) => setFormCategory(event.target.value)}>
+            <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900" value={formCategory} onChange={(event) => setFormCategory(event.target.value)}>
               {CATEGORIES.map((category) => (
                 <option key={category.id}>{category.name}</option>
               ))}
@@ -155,20 +155,20 @@ export default function ProjetsPage() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Budget cible</label>
-            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" placeholder="Ex: 2 000 EUR" value={formBudget} onChange={(event) => setFormBudget(event.target.value)} />
+            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900" placeholder="Ex: 2 000 EUR" value={formBudget} onChange={(event) => setFormBudget(event.target.value)} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">Objectif</label>
-            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" placeholder="Ex: Equiper la nouvelle cuisine" value={formObjective} onChange={(event) => setFormObjective(event.target.value)} />
+            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-900" placeholder="Ex: Equiper la nouvelle cuisine" value={formObjective} onChange={(event) => setFormObjective(event.target.value)} />
           </div>
-          <button onClick={handleCreate} disabled={saving || !formName.trim()} className="w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 text-sm shadow-md">
+          <button onClick={handleCreate} disabled={saving || !formName.trim()} className="w-full bg-blue-900 text-white font-semibold py-2.5 rounded-xl hover:bg-slate-950 transition-colors disabled:opacity-50 text-sm shadow-md">
             {saving ? "Creation..." : "Creer le projet"}
           </button>
         </div>
       )}
 
-      <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
+      <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <span className="absolute -top-2.5 left-4 bg-blue-900 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
         <p className="text-sm text-gray-800 mt-2">
           Un projet MAREF n est pas une simple liste. C est un cadre de decision avec budget, objectif, priorites et recommandation finale. Plus vous ajoutez d offres pertinentes, plus l analyse devient fiable.
         </p>
