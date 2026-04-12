@@ -17,7 +17,9 @@ function hasValidNumber(value: number | null | undefined) {
 }
 
 export function hasCompletePefas(offer: Offer) {
-  return Object.values(offer.pefas).every((value) => hasValidNumber(value) && value >= 0 && value <= 100);
+  return Object.values(offer.pefas).every(
+    (value) => hasValidNumber(value) && value !== null && value >= 0 && value <= 100
+  );
 }
 
 export function getOfferMissingFields(offer: Offer) {
@@ -40,7 +42,13 @@ export function getOfferTruthDescriptor(offer: Offer): OfferTruthDescriptor {
   const hasSource = hasText(offer.sourceUrl);
   const reliabilityScore = offer.reliabilityScore;
 
-  if (missingFields.length === 0 && hasSource && hasValidNumber(reliabilityScore) && reliabilityScore >= 80) {
+  if (
+    missingFields.length === 0 &&
+    hasSource &&
+    hasValidNumber(reliabilityScore) &&
+    reliabilityScore !== null &&
+    reliabilityScore >= 80
+  ) {
     return {
       state: "reliable",
       label: "Donnee fiable",

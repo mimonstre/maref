@@ -23,7 +23,7 @@ export function generateMimo(input: {
   }
 
   function getTopSignals(offer: Offer) {
-    const entries = Object.entries(offer.pefas).sort((a, b) => b[1] - a[1]);
+    const entries = Object.entries(offer.pefas).sort((a, b) => (b[1] ?? -1) - (a[1] ?? -1));
     return {
       bestAxis: entries[0],
       weakAxis: entries[entries.length - 1],

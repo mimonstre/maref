@@ -59,25 +59,33 @@ export function generateMimoAnalysis(offer: Offer): string {
     return "Les donnees disponibles sur cette offre sont insuffisantes pour produire une analyse fiable.";
   }
 
+  const pefas = {
+    P: offer.pefas.P ?? 0,
+    E: offer.pefas.E ?? 0,
+    F: offer.pefas.F ?? 0,
+    A: offer.pefas.A ?? 0,
+    S: offer.pefas.S ?? 0,
+  };
+
   const strong: string[] = [];
   const weak: string[] = [];
 
-  if (offer.pefas.P >= 75) strong.push("pertinence elevee pour votre profil");
-  if (offer.pefas.E >= 75) strong.push("excellent rapport cout/valeur");
-  if (offer.pefas.F >= 75) strong.push("acces fluide et conditions favorables");
-  if (offer.pefas.A >= 75) strong.push("ecosysteme fiable (marque + marchand)");
-  if (offer.pefas.S >= 75) strong.push("bonne stabilite dans le temps");
-  if (offer.pefas.P < 55) weak.push("la pertinence pour votre usage est limitee");
-  if (offer.pefas.E < 55) weak.push("le rapport cout/valeur est en dessous de la moyenne");
-  if (offer.pefas.F < 55) weak.push("les conditions d acces sont contraignantes");
-  if (offer.pefas.A < 55) weak.push("la fiabilite de l ecosysteme est incertaine");
-  if (offer.pefas.S < 55) weak.push("la stabilite a long terme n est pas garantie");
+  if (pefas.P >= 75) strong.push("pertinence elevee pour votre profil");
+  if (pefas.E >= 75) strong.push("excellent rapport cout/valeur");
+  if (pefas.F >= 75) strong.push("acces fluide et conditions favorables");
+  if (pefas.A >= 75) strong.push("ecosysteme fiable (marque + marchand)");
+  if (pefas.S >= 75) strong.push("bonne stabilite dans le temps");
+  if (pefas.P < 55) weak.push("la pertinence pour votre usage est limitee");
+  if (pefas.E < 55) weak.push("le rapport cout/valeur est en dessous de la moyenne");
+  if (pefas.F < 55) weak.push("les conditions d acces sont contraignantes");
+  if (pefas.A < 55) weak.push("la fiabilite de l ecosysteme est incertaine");
+  if (pefas.S < 55) weak.push("la stabilite a long terme n est pas garantie");
 
   let text = offer.brand + " " + offer.product + " dispose de donnees exploitables chez " + offer.merchant + ". ";
   if (strong.length > 0) text += "Points forts : " + strong.join(", ") + ". ";
   if (weak.length > 0) text += "Points d attention : " + weak.join(", ") + ". ";
 
-  const pefasAverage = Math.round((Object.values(offer.pefas).reduce((sum, value) => sum + (value || 0), 0)) / 5);
+  const pefasAverage = Math.round(Object.values(pefas).reduce((sum, value) => sum + value, 0) / 5);
 
   if (pefasAverage >= 85) text += "Les axes disponibles placent cette offre parmi les plus solides de sa categorie.";
   else if (pefasAverage >= 72) text += "Les axes disponibles sont globalement favorables, avec quelques points a verifier.";

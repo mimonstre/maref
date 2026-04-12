@@ -212,7 +212,12 @@ export async function getViewHistory() {
 
   return historyRows
     .filter((item) => offersMap[item.offer_id])
-    .map((item) => ({ id: item.id, offer_id: item.offer_id, viewed_at: item.viewed_at, ...offersMap[item.offer_id] }));
+    .map((item) => ({
+      ...offersMap[item.offer_id],
+      history_id: item.id,
+      offer_id: item.offer_id,
+      viewed_at: item.viewed_at,
+    }));
 }
 
 export async function clearViewHistory() {
