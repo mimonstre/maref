@@ -1,5 +1,5 @@
 import { getOfferDataState, type NotificationItem, type Offer } from "@/lib/core";
-import { getDemoOfferById, getFilteredDemoOffers } from "@/lib/demo/offers";
+import { getDemoOfferById, getFilteredDemoOffers, getSupplementalDemoOffers } from "@/lib/demo/offers";
 import { supabase } from "./supabase";
 
 type OfferRow = {
@@ -129,7 +129,14 @@ export async function getOffers(filters?: {
     return getFilteredDemoOffers(filters);
   }
 
-  return data.map((item) => mapOffer(item as OfferRow));
+  const mappedOffers = data.map((item) => mapOffer(item as OfferRow));
+
+  if (filters?.search) {
+    return mappedOffers.length > 0 ? mappedOffers : getFilteredDemoOffers(filters);
+  }
+
+  const supplementalOffers = getSupplementalDemoOffers(mappedOffers, filters, 10);
+  return [...mappedOffers, ...supplementalOffers];
 }
 
 export async function getOfferById(id: string) {

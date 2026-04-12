@@ -201,3 +201,46 @@ export function getFilteredDemoOffers(filters?: {
 export function getDemoOfferById(id: string) {
   return getDemoOffers().find((offer) => offer.id === id) || null;
 }
+
+export function getSupplementalDemoOffers(
+  existingOffers: Offer[],
+  filters?: {
+    category?: string;
+    subcategory?: string;
+    search?: string;
+  },
+  minimumPerSubcategory = 10,
+) {
+  const allDemoOffers = getFilteredDemoOffers(filters);
+  const existingIds = new Set(existingOffers.map((offer) => offer.id));
+
+  if (filters?.subcategory) {
+    const currentCount = existingOffers.filter((offer) => offer.subcategory === filters.subcategory).length;
+    if (currentCount >= minimumPerSubcategory) return [];
+
+    return allDemoOffers
+      .filter((offer) => !existingIds.has(offer.id))
+      .slice(0, minimumPerSubcategory - currentCount);
+  }
+
+  const subcategoryIds = filters?.category
+    ? CATEGORIES.find((category) => category.id === filters.category)?.subs.map((subcategory) => subcategory.id) || []
+    : [...new Set(allDemoOffers.map((offer) => offer.subcategory))];
+
+  const supplements: Offer[] = [];
+
+  subcategoryIds.forEach((subcategoryId) => {
+    const currentCount = existingOffers.filter((offer) => offer.subcategory === subcategoryId).length;
+    if (currentCount >= minimumPerSubcategory) return;
+
+    const missingCount = minimumPerSubcategory - currentCount;
+    const nextOffers = allDemoOffers
+      .filter((offer) => offer.subcategory === subcategoryId && !existingIds.has(offer.id))
+      .slice(0, missingCount);
+
+    nextOffers.forEach((offer) => existingIds.add(offer.id));
+    supplements.push(...nextOffers);
+  });
+
+  return supplements;
+}
