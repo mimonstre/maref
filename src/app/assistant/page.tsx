@@ -132,7 +132,7 @@ const avgScore =
     // Try Claude API with 5 second timeout
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const history = messages.map((m) => ({ from: m.from, text: m.text }));
 
@@ -173,7 +173,7 @@ const avgScore =
   if (context.recentSearches && context.recentSearches.length > 0) {
     dynamicSuggestions.push("Que penses-tu de mes dernieres recherches ?");
   }
-  dynamicSuggestions.push("Quelle est la meilleure offre ?");
+  dynamicSuggestions.push("Quelle est la meilleure offre pour moi ?");
 
   const allSuggestions = [...ASSISTANT_SUGGESTIONS, ...dynamicSuggestions];
 
@@ -182,11 +182,11 @@ const avgScore =
       <div className="flex-1 overflow-y-auto space-y-3 pb-4">
         {!contextLoaded && (
           <div className="flex justify-start">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 px-4 py-3 rounded-2xl rounded-bl-md">
+            <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-3">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "300ms" }}></span>
               </div>
             </div>
           </div>
@@ -198,15 +198,15 @@ const avgScore =
               className={
                 "max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-line " +
                 (message.from === "user"
-                  ? "bg-blue-700 text-white rounded-br-md"
-                  : "bg-gradient-to-br from-blue-50 to-blue-100 text-gray-800 rounded-bl-md border border-blue-200")
+                  ? "bg-blue-950 text-white rounded-br-md"
+                  : "rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-gray-800")
               }
             >
               {message.from === "mimo" && (
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-[0.6rem] font-bold text-blue-700">Mimo</span>
+                  <span className="text-[0.6rem] font-bold text-blue-950">Mimo</span>
                   {message.source === "ai" && (
-                    <span className="text-[0.55rem] px-1 py-0.5 rounded bg-blue-600 text-white font-semibold leading-none">IA</span>
+                    <span className="text-[0.55rem] px-1 py-0.5 rounded bg-blue-950 text-white font-semibold leading-none">IA</span>
                   )}
                   {message.source === "local" && (
                     <span className="text-[0.55rem] px-1 py-0.5 rounded bg-gray-200 text-gray-500 font-semibold leading-none">Local</span>
@@ -220,11 +220,11 @@ const avgScore =
 
         {typing && (
           <div className="flex justify-start">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 px-4 py-3 rounded-2xl rounded-bl-md">
+            <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-3">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "300ms" }}></span>
               </div>
             </div>
           </div>
@@ -238,7 +238,7 @@ const avgScore =
             <button
               key={suggestion}
               onClick={() => sendMessage(suggestion)}
-              className="text-xs px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-700 transition-colors"
+              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-slate-300 hover:text-blue-950"
             >
               {suggestion}
             </button>
@@ -248,7 +248,7 @@ const avgScore =
 
       <div className="flex gap-2 pt-3 border-t border-gray-200">
         <input
-          className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition-all"
+          className="flex-1 rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none transition-all focus:border-blue-950 focus:ring-2 focus:ring-slate-200"
           placeholder="Posez votre question a Mimo..."
           value={input}
           onChange={(event) => setInput(event.target.value)}
@@ -259,7 +259,7 @@ const avgScore =
         <button
           onClick={() => sendMessage()}
           disabled={!input.trim() || typing}
-          className="bg-blue-700 text-white px-4 py-2.5 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50"
+          className="rounded-xl bg-blue-950 px-4 py-2.5 text-white transition-colors hover:bg-slate-950 disabled:opacity-50"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <line x1="22" y1="2" x2="11" y2="13" />

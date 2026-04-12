@@ -10,50 +10,57 @@ function normalize(value: string) {
     .trim();
 }
 
-const FAMILY_RULES: Array<{ match: (text: string, offer: Offer) => boolean; family: CompareFamily }> = [
-  {
-    match: (text) => text.includes("seche linge") || text.includes("seche-linge") || text.includes("dryer"),
-    family: { key: "seche-linge", label: "Seche-linge" },
-  },
-  {
-    match: (text) => text.includes("lave linge") || text.includes("lave-linge") || text.includes("washing machine"),
-    family: { key: "lave-linge", label: "Lave-linge" },
-  },
-  {
-    match: (text) => text.includes("lave vaisselle") || text.includes("lave-vaisselle") || text.includes("dishwasher"),
-    family: { key: "lave-vaisselle", label: "Lave-vaisselle" },
-  },
-  {
-    match: (text) => text.includes("refrigerateur") || text.includes("refrigerator") || text.includes("frigo"),
-    family: { key: "refrigerateurs", label: "Refrigerateurs" },
-  },
-  {
-    match: (text) => text.includes("congel"),
-    family: { key: "congelation", label: "Congelation" },
-  },
+function getSubcategoryFamily(offer: Offer): CompareFamily | null {
+  const subcategory = CATEGORIES.flatMap((category) => category.subs).find((item) => item.id === offer.subcategory);
+  if (!subcategory) return null;
+
+  return {
+    key: `subcategory:${subcategory.id}`,
+    label: subcategory.name,
+  };
+}
+
+const CATEGORY_FALLBACK_RULES: Array<{ match: (text: string, offer: Offer) => boolean; family: CompareFamily }> = [
   {
     match: (text, offer) =>
-      offer.category === "televiseurs" || text.includes("televiseur") || text.includes("television") || text.includes("tv") || text.includes("oled") || text.includes("qled"),
-    family: { key: "televiseurs", label: "Televiseurs" },
+      offer.category === "televiseurs" ||
+      text.includes("televiseur") ||
+      text.includes("television") ||
+      text.includes("tv"),
+    family: { key: "category:televiseurs", label: "Televiseurs" },
+  },
+  {
+    match: (text) =>
+      text.includes("telephone") ||
+      text.includes("smartphone") ||
+      text.includes("mobile"),
+    family: { key: "category:telephonie", label: "Telephonie" },
+  },
+  {
+    match: (text) =>
+      text.includes("ordinateur") ||
+      text.includes("pc") ||
+      text.includes("laptop"),
+    family: { key: "category:informatique", label: "Informatique" },
   },
 ];
 
 export function getOfferCompareFamily(offer: Offer): CompareFamily {
+  const subcategoryFamily = getSubcategoryFamily(offer);
+  if (subcategoryFamily) {
+    return subcategoryFamily;
+  }
+
   const haystack = normalize([offer.product, offer.model, offer.subcategory, offer.category].filter(Boolean).join(" "));
-  const matchedRule = FAMILY_RULES.find((rule) => rule.match(haystack, offer));
+  const matchedRule = CATEGORY_FALLBACK_RULES.find((rule) => rule.match(haystack, offer));
   if (matchedRule) {
     return matchedRule.family;
   }
 
-  const subcategory = CATEGORIES.flatMap((category) => category.subs).find((item) => item.id === offer.subcategory);
-  if (subcategory) {
-    return { key: subcategory.id, label: subcategory.name };
-  }
-
   const category = CATEGORIES.find((item) => item.id === offer.category);
   if (category) {
-    return { key: category.id, label: category.name };
+    return { key: `category:${category.id}`, label: category.name };
   }
 
-  return { key: "autres", label: "Autres produits" };
+  return { key: "category:autres", label: "Autres produits" };
 }

@@ -18,6 +18,7 @@ export type MimoContext = {
 
 export const ASSISTANT_SUGGESTIONS = [
   "Mes meilleurs choix actuels",
+  "Aide-moi a cadrer mon besoin",
   "Comment fonctionne le score ?",
   "Que signifie PEFAS ?",
   "Aide-moi a comparer",
@@ -156,6 +157,18 @@ const RESPONSE_MAP: Record<string, ResponseVariants> = {
     "Je peux vous aider sur : le fonctionnement du score PEFAS, l analyse d une offre, la comparaison entre produits, la gestion de vos projets et favoris, ou simplement vous orienter vers la bonne section. Posez votre question !",
     "Pour bien demarrer sur MAREF : (1) completez votre profil decision, (2) explorez les offres par categorie, (3) sauvegardez vos favoris, (4) creez un projet pour votre achat principal. Je suis la pour vous guider a chaque etape.",
   ],
+  besoin: [
+    "Pour bien cadrer votre besoin, dites-moi la famille de produit, le budget cible, les 2 ou 3 criteres non negociables et votre horizon d usage. Je pourrai alors vous dire quoi comparer et quoi ignorer.",
+    "On peut repartir du besoin proprement : quel produit cherchez-vous, pour qui, dans quel contexte, avec quelles contraintes reelles ? Une fois cela pose, je peux vous guider vers les bonnes sous-categories et les bons arbitrages.",
+  ],
+  location: [
+    "Si vous renseignez votre localisation dans le profil, MAREF peut privilegier les offres et signaux utiles autour de chez vous quand ces donnees existent. Cela sert surtout a contextualiser la recommandation, pas a inventer une disponibilite locale.",
+    "La localisation ne sert pas au decor. Elle aide a prioriser des offres plus pertinentes localement quand l information existe et a mieux cadrer la decision selon votre zone.",
+  ],
+  technique: [
+    "Pour lire une fiche technique sans se perdre, il faut separer les specs structurantes des specs secondaires. Dites-moi la famille de produit et je vous dirai exactement quoi regarder en priorite.",
+    "Les donnees techniques ne valent que si elles sont reliees a votre usage. Je peux vous aider a traduire une fiche en impact concret : bruit, autonomie, capacite, dimensions, memoire, garantie ou risque.",
+  ],
 
   // --- Salutation ---
   bonjour: [
@@ -201,6 +214,9 @@ function matchKeyword(lower: string): string | null {
     [/\bfiabilit/, "fiabilite"],
     [/\bmimo\b|\btu es qui\b|\bqui es-tu\b/, "mimo"],
     [/\bmeilleur\b|\brecommand|\bconseill/, "meilleur"],
+    [/\bbesoin\b|\bchoisir\b|\bcadrer\b/, "besoin"],
+    [/\blocalisation\b|\bautour de chez moi\b|\bpres de chez moi\b/, "location"],
+    [/\btechnique\b|\bspec\b|\bfiche produit\b|\bcaracterist/, "technique"],
     [/\bbonjour\b|\bsalut\b|\bhello\b|\bhi\b/, "bonjour"],
     [/\bmerci\b|\bthanks\b/, "merci"],
     [/\baide\b|\baider\b|\bcomment\b|\bquoi\b|\bque faire\b/, "aide"],
@@ -303,7 +319,7 @@ function buildAnalyticalFallback(input: string, context?: MimoContext) {
   return (
     (fragments.length > 0 ? fragments.join(" ") + " " : "") +
     "Je peux traiter cette demande, mais il me faut un angle plus explicite. " +
-    `Si vous parlez de "${detectedNeed}", dites-moi si vous voulez : comprendre, comparer, verifier le risque, ou choisir la meilleure option selon votre contexte.`
+    `Si vous parlez de "${detectedNeed}", dites-moi si vous voulez : cadrer le besoin, comprendre une fiche, comparer 2 ou 3 references, verifier le risque marchand, ou choisir la meilleure option selon votre contexte.`
   );
 }
 
@@ -320,7 +336,10 @@ export function getMimoResponse(input: string, context?: MimoContext): string {
     return prefix + pick(RESPONSE_MAP[key]);
   }
 
-  // Contextual fallback: mention projects or favs if available
+  if (lower.includes("quel est le meilleur") || lower.includes("qu est ce qui est le mieux pour moi")) {
+    return buildContextualPrefix(context || {}, "meilleur") + pick(RESPONSE_MAP.meilleur);
+  }
+
   if (context?.recentSearches && context.recentSearches.length > 0) {
     return (
       "Je n ai pas compris exactement la demande, mais vos recherches recentes portent sur " +

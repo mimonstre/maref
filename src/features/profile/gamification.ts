@@ -53,25 +53,25 @@ const PROFILE_BADGE_RULES: Array<Omit<ProfileBadge, "completed"> & { isCompleted
   {
     id: "badge-first-project",
     name: "Premier projet",
-    description: "Attribue lorsque vous creez votre premier projet.",
+    description: "Obtenu lorsque vous creez votre premier projet.",
     isCompleted: (snapshot) => snapshot.projects >= 1,
   },
   {
     id: "badge-compare-5",
     name: "Comparateur",
-    description: "Attribue apres 5 comparaisons reelles.",
+    description: "Obtenu apres 5 comparaisons reelles.",
     isCompleted: (snapshot) => snapshot.comparisons >= 5,
   },
   {
     id: "badge-guide",
     name: "Guide actif",
-    description: "Attribue apres au moins 2 modules completes.",
+    description: "Obtenu apres au moins 2 modules completes.",
     isCompleted: (snapshot) => snapshot.guideModulesCompleted >= 2,
   },
   {
     id: "badge-community",
     name: "Contributeur forum",
-    description: "Attribue apres 1 topic et 3 reponses.",
+    description: "Obtenu apres 1 topic et 3 reponses.",
     isCompleted: (snapshot) => snapshot.topics >= 1 && snapshot.replies >= 3,
   },
 ];
@@ -83,14 +83,14 @@ const SEASONAL_BADGES: Array<{
   periodLabel: string;
   months: number[];
 }> = [
-  { id: "season-winter-sales", name: "Soldes d’hiver", description: "Badge disponible pendant la période des soldes d’hiver.", periodLabel: "Janvier - février", months: [0, 1] },
-  { id: "season-valentine", name: "Saint-Valentin", description: "Badge saisonnier autour de la période de la Saint-Valentin.", periodLabel: "Février", months: [1] },
-  { id: "season-easter", name: "Pâques", description: "Badge saisonnier associé aux sélections de printemps.", periodLabel: "Mars - avril", months: [2, 3] },
-  { id: "season-summer-sales", name: "Soldes d’été", description: "Badge disponible pendant la période des soldes d’été.", periodLabel: "Juin - juillet", months: [5, 6] },
-  { id: "season-french-days", name: "French Days", description: "Badge lié aux périodes French Days quand elles sont actives.", periodLabel: "Avril / septembre", months: [3, 8] },
-  { id: "season-halloween", name: "Halloween", description: "Badge saisonnier d’automne.", periodLabel: "Octobre", months: [9] },
-  { id: "season-black-friday", name: "Black Friday", description: "Badge saisonnier pour les comparatifs menés pendant Black Friday.", periodLabel: "Novembre", months: [10] },
-  { id: "season-christmas", name: "Noël", description: "Badge saisonnier pour les parcours d’achat de fin d’année.", periodLabel: "Décembre", months: [11] },
+  { id: "season-winter-sales", name: "Soldes d hiver", description: "Badge disponible pendant la periode des soldes d hiver.", periodLabel: "Janvier - fevrier", months: [0, 1] },
+  { id: "season-valentine", name: "Saint-Valentin", description: "Badge saisonnier autour de la periode de la Saint-Valentin.", periodLabel: "Fevrier", months: [1] },
+  { id: "season-easter", name: "Paques", description: "Badge saisonnier associe aux selections de printemps.", periodLabel: "Mars - avril", months: [2, 3] },
+  { id: "season-summer-sales", name: "Soldes d ete", description: "Badge disponible pendant la periode des soldes d ete.", periodLabel: "Juin - juillet", months: [5, 6] },
+  { id: "season-french-days", name: "French Days", description: "Badge lie aux periodes French Days quand elles sont actives.", periodLabel: "Avril / septembre", months: [3, 8] },
+  { id: "season-halloween", name: "Halloween", description: "Badge saisonnier d automne.", periodLabel: "Octobre", months: [9] },
+  { id: "season-black-friday", name: "Black Friday", description: "Badge saisonnier pour les comparatifs menes pendant Black Friday.", periodLabel: "Novembre", months: [10] },
+  { id: "season-christmas", name: "Noel", description: "Badge saisonnier pour les parcours d achat de fin d annee.", periodLabel: "Decembre", months: [11] },
 ];
 
 function readCurrentValue(snapshot: ProfileActivitySnapshot, taskId: string) {
@@ -153,5 +153,6 @@ export function getProfileImpactText(priority: string) {
   if (priority === "Fiabilite") return "Votre priorite Fiabilite renforce Assurance et Stabilite dans le calcul contextualise.";
   if (priority === "Prix") return "Votre priorite Prix renforce l axe Economie dans le calcul contextualise.";
   if (priority === "Simplicite") return "Votre priorite Simplicite renforce Fluidite dans le calcul contextualise.";
+  if (priority === "Durabilite") return "Votre priorite Durabilite renforce surtout Stabilite et le regard long terme sur l achat.";
   return "Vos preferences influencent le classement des offres uniquement a partir de donnees reelles disponibles.";
 }

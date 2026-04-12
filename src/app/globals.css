@@ -19,15 +19,15 @@
 }
 
 :root {
-  --background: #e8edf5;
+  --background: #dfe6ef;
   --foreground: #0f172a;
   --border: rgba(148, 163, 184, 0.2);
   --surface: rgba(255, 255, 255, 0.82);
   --surface-strong: rgba(255, 255, 255, 0.94);
   --surface-dark: #0c1a31;
-  --primary: #183765;
-  --primary-strong: #10294e;
-  --primary-soft: rgba(24, 55, 101, 0.10);
+  --primary: #10294e;
+  --primary-strong: #0b1e39;
+  --primary-soft: rgba(16, 41, 78, 0.12);
   --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.10);
   --shadow-card: 0 10px 30px rgba(16, 41, 78, 0.08);
   --sidebar: oklch(0.985 0 0);
@@ -48,7 +48,7 @@ body {
   background:
     radial-gradient(circle at top left, rgba(69, 98, 145, 0.16), transparent 28%),
     radial-gradient(circle at top right, rgba(32, 59, 97, 0.10), transparent 22%),
-    linear-gradient(180deg, #eff3f8 0%, #e8edf5 46%, #e0e7f0 100%);
+    linear-gradient(180deg, #e6edf5 0%, #dfe7f0 46%, #d7e0ea 100%);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -114,9 +114,9 @@ html { scroll-behavior: smooth; }
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 20% 10%, rgba(59, 130, 246, 0.08), transparent 22%),
-    radial-gradient(circle at 80% 12%, rgba(24, 55, 101, 0.08), transparent 18%),
-    radial-gradient(circle at 50% 100%, rgba(32, 59, 97, 0.05), transparent 30%);
+    radial-gradient(circle at 20% 10%, rgba(16, 41, 78, 0.10), transparent 22%),
+    radial-gradient(circle at 80% 12%, rgba(16, 41, 78, 0.08), transparent 18%),
+    radial-gradient(circle at 50% 100%, rgba(32, 59, 97, 0.06), transparent 30%);
   z-index: 0;
 }
 

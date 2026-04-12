@@ -18,7 +18,12 @@ export function loadCompareGroups(): CompareGroup[] {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CompareGroup[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((group) => ({
+      ...group,
+      offerIds: Array.from(new Set((group.offerIds || []).map((id) => String(id)))),
+    }));
   } catch {
     return [];
   }
@@ -72,8 +77,9 @@ export function mergeOffersIntoCompareGroups(offers: Offer[]) {
       accumulator[family.key] = { label: family.label, ids: [] };
     }
 
-    if (!accumulator[family.key].ids.includes(offer.id)) {
-      accumulator[family.key].ids.push(offer.id);
+    const offerId = String(offer.id);
+    if (!accumulator[family.key].ids.includes(offerId)) {
+      accumulator[family.key].ids.push(offerId);
     }
 
     return accumulator;

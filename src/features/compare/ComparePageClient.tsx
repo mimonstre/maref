@@ -50,10 +50,12 @@ export default function ComparePageClient() {
       let nextGroups = loadCompareGroups();
       const ids = searchParams.get("ids");
       if (ids) {
-        const incomingOffers = ids
+        const incomingIds = ids
           .split(",")
           .filter(Boolean)
-          .map((id) => data.find((offer) => offer.id === id))
+          .map((id) => String(id));
+        const incomingOffers = incomingIds
+          .map((id) => data.find((offer) => String(offer.id) === id))
           .filter(Boolean) as Offer[];
         nextGroups = mergeOffersIntoCompareGroups(incomingOffers);
       }
@@ -100,7 +102,7 @@ export default function ComparePageClient() {
   }, [searchParams]);
 
   const selectedOfferIds = useMemo(
-    () => Array.from(new Set(compareGroups.flatMap((group) => group.offerIds))),
+    () => Array.from(new Set(compareGroups.flatMap((group) => group.offerIds.map((id) => String(id))))),
     [compareGroups],
   );
 
@@ -108,7 +110,7 @@ export default function ComparePageClient() {
     if (!search) return [];
 
     return allOffers.filter((offer) => {
-      if (selectedOfferIds.includes(offer.id)) return false;
+      if (selectedOfferIds.includes(String(offer.id))) return false;
 
       const haystack = [offer.product, offer.brand, offer.merchant, getOfferCompareFamily(offer).label]
         .join(" ")
@@ -123,7 +125,7 @@ export default function ComparePageClient() {
       compareGroups
         .map((group) => {
           const selectedOffers = group.offerIds
-            .map((id) => allOffers.find((offer) => offer.id === id))
+            .map((id) => allOffers.find((offer) => String(offer.id) === String(id)))
             .filter(Boolean) as Offer[];
 
           const rankedOffers = rankOffersByScore(selectedOffers, projectContext || undefined).map((offer) => ({

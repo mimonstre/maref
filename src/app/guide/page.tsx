@@ -151,11 +151,11 @@ export default function GuidePage() {
 
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">Question {quizStep + 1} / {quiz.questions.length}</span>
-          <span className="text-xs font-semibold text-blue-900">{quiz.title}</span>
+          <span className="text-xs font-semibold text-blue-950">{quiz.title}</span>
         </div>
 
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-900 rounded-full transition-all" style={{ width: `${(quizStep / quiz.questions.length) * 100}%` }}></div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-blue-950 transition-all" style={{ width: `${(quizStep / quiz.questions.length) * 100}%` }}></div>
         </div>
 
         <h3 className="font-bold text-lg">{question.q}</h3>
@@ -210,7 +210,7 @@ export default function GuidePage() {
 
         <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4 shadow-sm">
           <span className="absolute -top-2.5 left-4 bg-blue-900 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
-          <p className="text-sm text-gray-800 mt-2">Ce module vous aide a comprendre un aspect cle du produit. Chaque lecon est courte, concrete et directement applicable.</p>
+          <p className="mt-2 text-sm text-gray-800">Chaque lecon est construite comme un vrai mini-cours : un sujet clair, un angle decisionnel et une application immediate dans MAREF.</p>
         </div>
 
         <div className="space-y-3">
@@ -225,12 +225,18 @@ export default function GuidePage() {
                     {completed ? "OK" : index + 1}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-sm mb-1">Lecon {index + 1}</h4>
-                    <p className="text-sm text-gray-600 leading-relaxed">{lesson}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-950">Lecon {index + 1}</h4>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-slate-600">
+                        {lesson.title}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{lesson.title}</p>
+                    <p className="mt-2 text-sm leading-7 text-gray-600">{lesson.body}</p>
                     {!completed && (
                       <button
                         onClick={() => markLessonComplete(activeGuideModule.id, index, totalLessons)}
-                        className="mt-2 text-xs font-semibold text-blue-900 border border-slate-300 bg-slate-50 hover:bg-slate-100 px-3 py-1 rounded-lg transition-colors"
+                        className="mt-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-1 text-xs font-semibold text-blue-950 transition-colors hover:bg-slate-100"
                       >
                         Marquer comme lu
                       </button>
@@ -286,21 +292,21 @@ export default function GuidePage() {
                 onClick={() => setActiveModule(moduleItem.id)}
                 className="bg-white rounded-xl border border-gray-200 p-4 flex gap-3.5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
               >
-                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-2xl shrink-0">{moduleItem.icon}</div>
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-2xl">{moduleItem.icon}</div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h4 className="font-bold text-sm">{moduleItem.title}</h4>
                     {progress > 0 && progress < 100 && (
-                      <span className="text-[0.65rem] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">En cours</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-semibold text-blue-950">En cours</span>
                     )}
                     {progress === 100 && (
-                      <span className="text-[0.65rem] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Termine</span>
+                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[0.65rem] font-semibold text-blue-950">Termine</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">{moduleItem.desc}</p>
                   <div className="flex items-center gap-3 mt-2">
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 rounded-full" style={{ width: `${progress}%` }}></div>
+                      <div className="h-full rounded-full bg-blue-950" style={{ width: `${progress}%` }}></div>
                     </div>
                     <span className="text-[0.65rem] text-gray-400 shrink-0">{progress}%</span>
                   </div>
@@ -329,9 +335,9 @@ export default function GuidePage() {
                 setQuizStep(0);
                 setQuizAnswers([]);
               }}
-              className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+              className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
             >
-              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-700 shrink-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-blue-950">
                 <PencilLine className="w-5 h-5" />
               </div>
               <div className="flex-1">
@@ -339,7 +345,7 @@ export default function GuidePage() {
                 <p className="text-xs text-gray-500">{quizItem.questions.length} questions</p>
               </div>
               {completedQuizzes.has(quizItem.id) && (
-                <span className="text-[0.65rem] font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">Valide</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[0.65rem] font-semibold text-blue-950 shrink-0">Valide</span>
               )}
               <svg className="w-5 h-5 text-gray-300 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <polyline points="9 18 15 12 9 6" />
@@ -350,12 +356,12 @@ export default function GuidePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Link href="/assistant" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 transition-all flex items-center gap-2">
-          <Bot className="w-5 h-5 text-blue-700" />
+        <Link href="/assistant" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-slate-300 transition-all flex items-center gap-2">
+          <Bot className="w-5 h-5 text-blue-950" />
           <span className="text-sm font-semibold">Demander a Mimo</span>
         </Link>
-        <Link href="/forum" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 transition-all flex items-center gap-2">
-          <MessageSquare className="w-5 h-5 text-blue-700" />
+        <Link href="/forum" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-slate-300 transition-all flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-blue-950" />
           <span className="text-sm font-semibold">Forum</span>
         </Link>
       </div>

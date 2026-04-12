@@ -80,8 +80,8 @@ export default function ForumPage() {
       setNewTitle("");
       setNewContent("");
       setShowNewTopic(false);
-      setMessage("Topic publie");
-      setTimeout(() => setMessage(""), 2000);
+      setMessage("Topic publie.");
+      setTimeout(() => setMessage(""), 2200);
       await loadTopics();
     }
 
@@ -102,8 +102,8 @@ export default function ForumPage() {
 
     if (success) {
       setReplyText("");
-      setMessage("Reponse publiee");
-      setTimeout(() => setMessage(""), 2000);
+      setMessage("Reponse publiee.");
+      setTimeout(() => setMessage(""), 2200);
       await Promise.all([loadReplies(activeTopic.id), loadTopics()]);
     }
 
@@ -120,64 +120,73 @@ export default function ForumPage() {
     }
   }
 
-  const filteredTopics = activeTab === "recent"
-    ? topics
-    : topics.filter((topic) => {
-        const topicCategory = topic.category.toLowerCase();
-        return topicCategory === activeTab || getForumCategoryLabel(topic.category).toLowerCase().includes(activeTab);
-      });
+  const filteredTopics =
+    activeTab === "recent"
+      ? topics
+      : topics.filter((topic) => {
+          const topicCategory = topic.category.toLowerCase();
+          return topicCategory === activeTab || getForumCategoryLabel(topic.category).toLowerCase().includes(activeTab);
+        });
 
   if (activeTopic) {
     return (
       <div className="space-y-4">
         {message && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+          <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-xl bg-blue-900 px-4 py-2 text-sm font-medium text-white shadow-lg animate-fade-in">
             {message}
           </div>
         )}
 
-        <button onClick={() => { setActiveTopic(null); setReplies([]); }} className="flex items-center gap-1 text-sm text-gray-500 hover:text-blue-700 transition-colors">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6" /></svg>
+        <button
+          onClick={() => {
+            setActiveTopic(null);
+            setReplies([]);
+          }}
+          className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-blue-900"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
           Retour au forum
         </button>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className={"w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold " + getForumAvatarColor(activeTopic.author_name)}>
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 flex items-center gap-2.5">
+            <div className={"flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white " + getForumAvatarColor(activeTopic.author_name)}>
               {activeTopic.author_name[0]}
             </div>
             <div>
-              <span className="font-semibold text-sm">{activeTopic.author_name}</span>
+              <span className="text-sm font-semibold">{activeTopic.author_name}</span>
               <p className="text-xs text-gray-400">{timeAgo(activeTopic.created_at)}</p>
             </div>
           </div>
-          <h2 className="text-lg font-bold mb-2">{activeTopic.title}</h2>
-          <p className="text-sm text-gray-600 leading-relaxed">{activeTopic.content}</p>
-          <div className="flex gap-2 mt-3">
-            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">{getForumCategoryLabel(activeTopic.category)}</span>
+          <h2 className="mb-2 text-lg font-bold">{activeTopic.title}</h2>
+          <p className="text-sm leading-relaxed text-gray-600">{activeTopic.content}</p>
+          <div className="mt-3 flex gap-2">
+            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{getForumCategoryLabel(activeTopic.category)}</span>
             <span className="text-xs text-gray-400">{replies.length} reponse{replies.length > 1 ? "s" : ""}</span>
           </div>
         </div>
 
         <div>
-          <h3 className="font-bold text-sm mb-3">Reponses ({replies.length})</h3>
+          <h3 className="mb-3 text-sm font-bold">Reponses ({replies.length})</h3>
           {replies.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 text-center">
               <p className="text-sm text-gray-400">Aucune reponse. Soyez le premier.</p>
             </div>
           ) : (
             <div className="space-y-3">
               {replies.map((reply) => (
-                <div key={reply.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={"w-7 h-7 rounded-full flex items-center justify-center text-white text-[0.65rem] font-bold " + getForumAvatarColor(reply.author_name)}>
+                <div key={reply.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className={"flex h-7 w-7 items-center justify-center rounded-full text-[0.65rem] font-bold text-white " + getForumAvatarColor(reply.author_name)}>
                       {reply.author_name[0]}
                     </div>
-                    <span className="font-semibold text-xs">{reply.author_name}</span>
+                    <span className="text-xs font-semibold">{reply.author_name}</span>
                     <span className="text-[0.65rem] text-gray-400">{timeAgo(reply.created_at)}</span>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{reply.content}</p>
-                  <button onClick={() => handleVote(reply.id)} className="mt-2 text-xs text-blue-600 font-medium hover:text-blue-800 transition-colors">
+                  <p className="text-sm leading-relaxed text-gray-700">{reply.content}</p>
+                  <button onClick={() => handleVote(reply.id)} className="mt-2 text-xs font-medium text-blue-900 transition-colors hover:text-slate-950">
                     +1 ({reply.votes})
                   </button>
                 </div>
@@ -186,10 +195,10 @@ export default function ForumPage() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-          <h4 className="font-bold text-sm mb-2">Repondre</h4>
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h4 className="mb-2 text-sm font-bold">Repondre</h4>
           <textarea
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none"
+            className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-900"
             rows={3}
             placeholder="Votre reponse..."
             value={replyText}
@@ -198,7 +207,7 @@ export default function ForumPage() {
           <button
             onClick={handleReply}
             disabled={saving || !replyText.trim()}
-            className="mt-2 bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors disabled:opacity-50 text-sm shadow-sm"
+            className="mt-2 rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-950 disabled:opacity-50"
           >
             {saving ? "Publication..." : "Publier"}
           </button>
@@ -210,7 +219,7 @@ export default function ForumPage() {
   return (
     <div className="space-y-4">
       {message && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg z-50 animate-fade-in">
+        <div className="fixed left-1/2 top-16 z-50 -translate-x-1/2 rounded-xl bg-blue-900 px-4 py-2 text-sm font-medium text-white shadow-lg animate-fade-in">
           {message}
         </div>
       )}
@@ -218,59 +227,85 @@ export default function ForumPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Forum</h2>
-          <p className="text-sm text-gray-500">Echangez avec la communaute MAREF</p>
+          <p className="text-sm text-gray-500">Aucun topic n est pre-rempli. La discussion commence avec de vrais utilisateurs.</p>
         </div>
         <button
           onClick={() => setShowNewTopic(!showNewTopic)}
-          className="text-sm font-semibold bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors shadow-sm"
+          className="rounded-lg bg-blue-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-950"
         >
           {showNewTopic ? "Annuler" : "+ Nouveau topic"}
         </button>
       </div>
 
       {showNewTopic && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3 shadow-sm animate-fade-in-up">
+        <div className="animate-fade-in-up space-y-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Titre *</label>
-            <input className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" placeholder="Ex: Quel lave-linge choisir pour un studio ?" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} />
+            <label className="mb-1 block text-xs font-semibold text-gray-500">Titre *</label>
+            <input
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-900"
+              placeholder="Ex: Quel lave-linge choisir pour un studio ?"
+              value={newTitle}
+              onChange={(event) => setNewTitle(event.target.value)}
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Categorie</label>
-            <select className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600" value={newCategory} onChange={(event) => setNewCategory(event.target.value)}>
+            <label className="mb-1 block text-xs font-semibold text-gray-500">Categorie</label>
+            <select
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-900"
+              value={newCategory}
+              onChange={(event) => setNewCategory(event.target.value)}
+            >
               <option value="general">General</option>
               {CATEGORIES.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">Contenu *</label>
-            <textarea className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-600 resize-none" rows={4} placeholder="Decrivez votre question ou partagez votre experience..." value={newContent} onChange={(event) => setNewContent(event.target.value)}></textarea>
+            <label className="mb-1 block text-xs font-semibold text-gray-500">Contenu *</label>
+            <textarea
+              className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-900"
+              rows={4}
+              placeholder="Decrivez votre question ou partagez votre experience..."
+              value={newContent}
+              onChange={(event) => setNewContent(event.target.value)}
+            ></textarea>
           </div>
-          <button onClick={handleNewTopic} disabled={saving || !newTitle.trim() || !newContent.trim()} className="w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 transition-colors disabled:opacity-50 text-sm shadow-md">
+          <button
+            onClick={handleNewTopic}
+            disabled={saving || !newTitle.trim() || !newContent.trim()}
+            className="w-full rounded-xl bg-blue-900 py-2.5 text-sm font-semibold text-white shadow-md transition-colors hover:bg-slate-950 disabled:opacity-50"
+          >
             {saving ? "Publication..." : "Publier le topic"}
           </button>
         </div>
       )}
 
-      <div className="flex gap-0 border-b-2 border-gray-100 overflow-x-auto">
-        {FORUM_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={"px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-[2px] transition-colors " + (activeTab === tab.id ? "text-blue-700 border-blue-700" : "text-gray-400 border-transparent hover:text-gray-600")}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="overflow-x-auto border-b-2 border-gray-100">
+        <div className="flex gap-0">
+          {FORUM_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={
+                "whitespace-nowrap border-b-2 -mb-[2px] px-4 py-2.5 text-sm font-semibold transition-colors " +
+                (activeTab === tab.id ? "border-blue-900 text-blue-900" : "border-transparent text-gray-400 hover:text-gray-600")
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((item) => (
-            <div key={item} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+            <div key={item} className="animate-pulse rounded-xl border border-gray-200 bg-white p-4">
+              <div className="mb-2 h-4 w-2/3 rounded bg-gray-200"></div>
+              <div className="h-3 w-1/3 rounded bg-gray-200"></div>
             </div>
           ))}
         </div>
@@ -278,39 +313,37 @@ export default function ForumPage() {
         <EmptyState
           icon="?"
           title="Il n y a encore aucune discussion"
-          description="Le forum reste vide tant qu aucun utilisateur n a publie de contenu reel."
+          description="Aucun topic n est pre-rempli. Le premier contenu visible viendra d un vrai compte utilisateur."
           action={() => setShowNewTopic(true)}
           actionLabel="Creer le premier topic"
         />
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white shadow-sm">
           {filteredTopics.map((topic) => (
-            <div key={topic.id} onClick={() => openTopic(topic)} className="p-4 hover:bg-gray-50 cursor-pointer transition-colors">
-              <div className="flex items-center justify-between mb-1.5">
+            <div key={topic.id} onClick={() => openTopic(topic)} className="cursor-pointer p-4 transition-colors hover:bg-gray-50">
+              <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className={"w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold " + getForumAvatarColor(topic.author_name)}>
+                  <div className={"flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white " + getForumAvatarColor(topic.author_name)}>
                     {topic.author_name[0]}
                   </div>
-                  <div>
-                    <span className="font-semibold text-xs">{topic.author_name}</span>
-                  </div>
+                  <span className="text-xs font-semibold">{topic.author_name}</span>
                 </div>
                 <span className="text-[0.65rem] text-gray-400">{timeAgo(topic.created_at)}</span>
               </div>
-              <h4 className="font-bold text-sm mb-1">{topic.title}</h4>
-              <p className="text-xs text-gray-500 line-clamp-2">{topic.content}</p>
-              <div className="flex gap-3 mt-2">
+              <h4 className="mb-1 text-sm font-bold">{topic.title}</h4>
+              <p className="line-clamp-2 text-xs text-gray-500">{topic.content}</p>
+              <div className="mt-2 flex gap-3">
                 <span className="text-[0.7rem] text-gray-400">{topic.reply_count} reponse{topic.reply_count > 1 ? "s" : ""}</span>
-                <span className="text-[0.65rem] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">{getForumCategoryLabel(topic.category)}</span>
+                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[0.65rem] font-medium text-gray-500">{getForumCategoryLabel(topic.category)}</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 bg-blue-700 text-white text-[0.7rem] font-bold px-2.5 py-0.5 rounded-md shadow-sm">Mimo</span>
-        <p className="text-sm text-gray-800 mt-2">
+      <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
+        <span className="absolute -top-2.5 left-4 rounded-md bg-blue-900 px-2.5 py-0.5 text-[0.7rem] font-bold text-white shadow-sm">Mimo</span>
+        <p className="mt-2 text-sm text-gray-800">
           Le forum reste volontairement vide tant que la communaute ne publie pas de contenu reel. Aucun topic n est pre-rempli.
         </p>
       </div>

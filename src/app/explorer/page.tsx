@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -223,10 +223,6 @@ export default function ExplorerPage() {
     return allOffers.filter((offer) => offer.subcategory === subcategoryId).length;
   }
 
-  function getCatAvgScore(categoryId: string) {
-    return averageOfferScore(allOffers.filter((offer) => offer.category === categoryId));
-  }
-
   function getSubAvgScore(subcategoryId: string) {
     return averageOfferScore(allOffers.filter((offer) => offer.subcategory === subcategoryId));
   }
@@ -237,9 +233,7 @@ export default function ExplorerPage() {
         activeCat.name +
         " contient " +
         getCatCount(activeCat.id) +
-        " offres analysees avec un score moyen de " +
-        getCatAvgScore(activeCat.id) +
-        "/100. Selectionnez une sous-categorie pour voir les offres detaillees."
+        " offres. Selectionnez une sous-categorie pour afficher une comparaison propre et envoyer jusqu a 3 references dans le meme comparateur."
       : filteredOffers.length > 0
         ? generateMimo({ mode: "explorer", comparison: filteredOffers.slice(0, 5) })
         : "Explorez les categories pour faire ressortir les meilleures options selon vos criteres.";
@@ -304,13 +298,13 @@ export default function ExplorerPage() {
           <button onClick={() => { setActiveCategory(null); setActiveSubcategory(null); }} className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors">
             Tout
           </button>
-          <span className="text-gray-300">›</span>
+          <span className="text-gray-300">â€º</span>
           <button onClick={() => setActiveSubcategory(null)} className="text-xs px-3 py-1.5 rounded-full bg-blue-700 text-white font-medium">
             {activeCat?.name}
           </button>
           {activeSubcategory && (
             <>
-              <span className="text-gray-300">›</span>
+              <span className="text-gray-300">â€º</span>
               <span className="text-xs px-3 py-1.5 rounded-full bg-blue-700 text-white font-medium">
                 {activeCat?.subs.find((subcategory) => subcategory.id === activeSubcategory)?.name}
               </span>
@@ -331,17 +325,13 @@ export default function ExplorerPage() {
 
           <div className="space-y-3">
             {CATEGORIES.map((category) => {
-              const avg = getCatAvgScore(category.id);
-
               return (
                 <div key={category.id} onClick={() => setActiveCategory(category.id)} className="premium-card flex cursor-pointer items-center gap-4 rounded-[28px] p-5 transition-all group hover:translate-y-[-2px]">
                   <div className="flex h-14 w-14 items-center justify-center rounded-[22px] bg-blue-50 text-2xl group-hover:bg-blue-100 transition-colors">{category.icon}</div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <h4 className="text-lg font-black text-slate-950">{category.name}</h4>
-                      {avg > 0 && <ScoreCircle score={avg} size="xs" />}
                     </div>
-                    <p className="text-sm text-slate-500">{category.subs.length} sous-catégories structurées pour une comparaison propre.</p>
                     <div className="flex gap-1.5 mt-2 flex-wrap">
                       {category.subs.map((subcategory) => (
                         <span key={subcategory.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] text-slate-500">
@@ -359,7 +349,7 @@ export default function ExplorerPage() {
           </div>
 
           {initialLoaded && (
-            <MimoCard text="Commencez par une famille, descendez jusqu’à la bonne sous-catégorie, puis ne gardez que les offres qui méritent vraiment d’être comparées." />
+            <MimoCard text="Commencez par une famille, descendez jusqu a la bonne sous-categorie, puis ne gardez que les offres qui meritent vraiment d etre comparees." />
           )}
         </div>
       )}
@@ -431,7 +421,7 @@ export default function ExplorerPage() {
             </div>
             {bestBuyAvailable && (
               <p className="mt-3 text-xs font-medium text-blue-700">
-                Résultats live Best Buy affichés pour compléter le catalogue local.
+                Resultats live Best Buy affiches pour completer le catalogue local.
               </p>
             )}
             {topSuggestion && (
@@ -487,7 +477,7 @@ export default function ExplorerPage() {
           {loading ? (
             <LoadingSkeleton count={4} />
           ) : filteredOffers.length === 0 ? (
-            <EmptyState icon="🔍" title="Aucun resultat" description="Essayez d elargir vos criteres." action={() => { setSearch(""); setActiveSubcategory(null); }} actionLabel="Reinitialiser" />
+            <EmptyState icon="ðŸ”" title="Aucun resultat" description="Essayez d elargir vos criteres." action={() => { setSearch(""); setActiveSubcategory(null); }} actionLabel="Reinitialiser" />
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
               {filteredOffers.map((offer) => (
@@ -582,3 +572,5 @@ export default function ExplorerPage() {
     </div>
   );
 }
+
+

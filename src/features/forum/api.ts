@@ -6,8 +6,12 @@ type ReplyRow = ForumReply;
 
 export async function getForumTopics(): Promise<ForumTopic[]> {
   const [{ data: topicsData, error: topicsError }, { data: repliesData, error: repliesError }] = await Promise.all([
-    supabase.from("forum_topics").select("id, title, content, category, author_name, created_at").order("created_at", { ascending: false }),
-    supabase.from("forum_replies").select("id, topic_id"),
+    supabase
+      .from("forum_topics")
+      .select("id, title, content, category, author_name, user_id, created_at")
+      .not("user_id", "is", null)
+      .order("created_at", { ascending: false }),
+    supabase.from("forum_replies").select("id, topic_id").not("user_id", "is", null),
   ]);
 
   if (topicsError || repliesError || !topicsData) {
@@ -29,8 +33,9 @@ export async function getForumTopics(): Promise<ForumTopic[]> {
 export async function getForumReplies(topicId: string): Promise<ForumReply[]> {
   const { data, error } = await supabase
     .from("forum_replies")
-    .select("id, topic_id, content, author_name, votes, created_at")
+    .select("id, topic_id, content, author_name, user_id, votes, created_at")
     .eq("topic_id", topicId)
+    .not("user_id", "is", null)
     .order("created_at", { ascending: true });
 
   if (error || !data) {

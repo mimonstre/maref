@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ScoreCircle, Toast } from "@/components/shared/Score";
 import { CATEGORIES, getCategoryIcon } from "@/lib/categories";
-import { deriveUserJourney } from "@/lib/core";
 import { analyzeProject } from "@/lib/projects/service";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import {
@@ -101,7 +100,6 @@ export default function ProjetsPage() {
 
   const matureProjects = projects.filter((project) => (projectOffers[project.id] || []).length >= 2).length;
   const actionableProjects = projects.filter((project) => (projectOffers[project.id] || []).length > 0).length;
-  const journey = deriveUserJourney(projects, projectOffers);
 
   return (
     <div className="space-y-5">
@@ -172,32 +170,6 @@ export default function ProjetsPage() {
         <p className="text-sm text-gray-800 mt-2">
           Un projet MAREF n est pas une simple liste. C est un cadre de decision avec budget, objectif, priorites et recommandation finale. Plus vous ajoutez d offres pertinentes, plus l analyse devient fiable.
         </p>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[0.7rem] font-bold text-blue-700 uppercase tracking-wide">Etape actuelle</p>
-            <h3 className="font-bold mt-1">{journey.title}</h3>
-            <p className="text-sm text-gray-600 mt-1">{journey.description}</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-800 flex items-center justify-center font-bold shrink-0">
-            {journey.progress}/5
-          </div>
-        </div>
-        <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 rounded-full" style={{ width: journey.progress * 20 + "%" }}></div>
-        </div>
-        <div className="flex gap-2 mt-4 flex-wrap">
-          <button onClick={() => router.push(journey.primaryAction.href)} className="text-xs font-semibold bg-blue-700 text-white px-3 py-2 rounded-lg hover:bg-blue-800 transition-colors">
-            {journey.primaryAction.label}
-          </button>
-          {journey.secondaryAction && (
-            <button onClick={() => router.push(journey.secondaryAction.href)} className="text-xs font-semibold bg-white border border-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:border-blue-300 transition-colors">
-              {journey.secondaryAction.label}
-            </button>
-          )}
-        </div>
       </div>
 
       {loading ? (
