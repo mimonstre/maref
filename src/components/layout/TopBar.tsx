@@ -51,11 +51,11 @@ export default function TopBar() {
     <header className="fixed left-0 right-0 top-0 z-50 px-3 pt-3 sm:px-6">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between rounded-2xl border border-white/60 bg-white/82 px-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)] backdrop-blur-xl">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-blue-800 text-sm font-black text-white shadow-[0_12px_25px_rgba(15,23,42,0.28)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-sm font-black text-white shadow-[0_12px_25px_rgba(15,23,42,0.28)]">
             M
           </div>
           <div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-blue-900/70">Intelligence Decisionnelle</p>
+            <p className="text-[0.68rem] font-bold uppercase tracking-[0.26em] text-blue-950/70">Intelligence Décisionnelle</p>
             <p className="text-base font-extrabold tracking-tight text-slate-950">MAREF</p>
           </div>
         </Link>
@@ -70,8 +70,8 @@ export default function TopBar() {
                 className={
                   "rounded-xl px-3 py-2 text-sm font-semibold transition-all " +
                   (active
-                    ? "bg-blue-900 text-white shadow-[0_10px_22px_rgba(15,23,42,0.20)]"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-blue-900")
+                    ? "bg-blue-950 text-white shadow-[0_10px_22px_rgba(15,23,42,0.20)]"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-blue-950")
                 }
               >
                 {item.label}
@@ -85,13 +85,13 @@ export default function TopBar() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="hidden text-sm font-semibold text-slate-600 transition-colors hover:text-blue-900 sm:block"
+                className="hidden text-sm font-semibold text-slate-600 transition-colors hover:text-blue-950 sm:block"
               >
                 Connexion
               </Link>
               <Link
                 href="/login"
-                className="rounded-xl bg-gradient-to-r from-blue-950 to-blue-800 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_25px_rgba(15,23,42,0.24)] transition-all hover:translate-y-[-1px] hover:from-slate-950 hover:to-blue-900"
+                className="rounded-xl bg-gradient-to-r from-blue-950 to-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_25px_rgba(15,23,42,0.24)] transition-all hover:translate-y-[-1px] hover:from-slate-950 hover:to-blue-950"
               >
                 Commencer
               </Link>
@@ -116,7 +116,7 @@ export default function TopBar() {
               <div className="relative ml-1">
                 <button
                   onClick={() => setShowMenu((current) => !current)}
-                  className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-950 to-blue-800 text-sm font-bold text-white ring-4 ring-slate-200 transition-transform hover:scale-[1.03]"
+                  className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-950 to-slate-900 text-sm font-bold text-white ring-4 ring-slate-200 transition-transform hover:scale-[1.03]"
                   aria-label="Ouvrir le menu du compte"
                 >
                   {initials}
@@ -140,7 +140,7 @@ export default function TopBar() {
                               onClick={() => setShowMenu(false)}
                               className={
                                 "mx-2 flex items-center gap-2.5 rounded-2xl px-4 py-2.5 text-sm transition-colors " +
-                                (active ? "bg-slate-100 text-blue-900" : "hover:bg-slate-50")
+                                (active ? "bg-slate-100 text-blue-950" : "hover:bg-slate-50")
                               }
                             >
                               <item.icon className="h-4 w-4" />
@@ -159,7 +159,7 @@ export default function TopBar() {
                           className="mx-2 flex w-[calc(100%-1rem)] items-center gap-2.5 rounded-2xl px-4 py-2.5 text-left text-sm text-red-500 transition-colors hover:bg-red-50"
                         >
                           <LogOut className="h-4 w-4" />
-                          Deconnexion
+                          Déconnexion
                         </button>
                       </div>
                     </div>

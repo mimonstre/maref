@@ -39,7 +39,7 @@ export default function BottomNav() {
                     onClick={() => setShowMore(false)}
                     className={
                       "flex flex-col items-center gap-1 rounded-2xl p-3 transition-all " +
-                      (active ? "bg-slate-100 text-blue-900 shadow-[0_10px_22px_rgba(15,23,42,0.10)]" : "text-gray-600 hover:bg-slate-50")
+                      (active ? "bg-slate-100 text-blue-950 shadow-[0_10px_22px_rgba(15,23,42,0.10)]" : "text-gray-600 hover:bg-slate-50")
                     }
                   >
                     <item.icon className="h-5 w-5" />
@@ -64,7 +64,7 @@ export default function BottomNav() {
               href={item.href}
               className={
                 "flex flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 transition-all " +
-                (active ? "bg-slate-100 text-blue-900" : "text-gray-400 hover:text-blue-800")
+                (active ? "bg-slate-100 text-blue-950" : "text-gray-400 hover:text-blue-950")
               }
             >
               <item.icon className="h-5 w-5" />
@@ -76,7 +76,7 @@ export default function BottomNav() {
           onClick={() => setShowMore((current) => !current)}
           className={
             "flex flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 transition-all " +
-            (showMore ? "bg-slate-100 text-blue-900" : "text-gray-400 hover:text-blue-800")
+            (showMore ? "bg-slate-100 text-blue-950" : "text-gray-400 hover:text-blue-950")
           }
         >
           <MoreHorizontal className="h-5 w-5" />

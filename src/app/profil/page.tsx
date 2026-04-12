@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   BarChart3,
   Bot,
-  Compass,
   FolderKanban,
   Heart,
   LocateFixed,
@@ -15,26 +14,25 @@ import {
   Sparkles,
   Target,
   Timer,
-  TriangleAlert,
   Trophy,
   UserCircle2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, IncompleteDataWarning, LoadingSkeleton, NoDataBlock } from "@/components/shared/Score";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { getProfileStats } from "@/features/profile/api";
 import { computeProfileProgress, getProfileImpactText } from "@/features/profile/gamification";
 import { getUserLocation, saveUserLocation } from "@/lib/core/userSignals";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import { getUserProfile, upsertUserProfile } from "@/lib/services/offers";
-import { useAuth } from "@/components/auth/AuthProvider";
 
 const preferenceIcons = {
-  "Cadre budgetaire": <BarChart3 className="h-4 w-4 text-blue-950" />,
-  "Intensite d usage": <Target className="h-4 w-4 text-blue-950" />,
-  "Priorite d achat": <ShieldCheck className="h-4 w-4 text-blue-950" />,
-  "Horizon de conservation": <Timer className="h-4 w-4 text-blue-950" />,
-  "Tolerance au risque": <TriangleAlert className="h-4 w-4 text-blue-950" />,
-  Localisation: <MapPin className="h-4 w-4 text-blue-950" />,
+  "Taille du foyer": <Target className="h-4 w-4 text-blue-950" />,
+  "Type de logement": <MapPin className="h-4 w-4 text-blue-950" />,
+  "Rapport prix / qualité": <BarChart3 className="h-4 w-4 text-blue-950" />,
+  "Style de décision": <Timer className="h-4 w-4 text-blue-950" />,
+  "Préférence d’accompagnement": <ShieldCheck className="h-4 w-4 text-blue-950" />,
+  Localisation: <LocateFixed className="h-4 w-4 text-blue-950" />,
 };
 
 const defaultStats = {
@@ -46,14 +44,42 @@ const defaultStats = {
   guideModulesCompleted: 0,
 };
 
+const preferenceFields = [
+  {
+    key: "usage",
+    label: "Taille du foyer",
+    options: ["1 personne", "2 personnes", "3 à 4 personnes", "5 personnes et plus"],
+  },
+  {
+    key: "risk",
+    label: "Type de logement",
+    options: ["Studio", "Appartement", "Maison", "Logement avec contraintes d’espace ou de bruit"],
+  },
+  {
+    key: "budget",
+    label: "Rapport prix / qualité",
+    options: ["Prix avant tout", "Équilibre", "Qualité avant tout", "Durabilité avant tout"],
+  },
+  {
+    key: "horizon",
+    label: "Style de décision",
+    options: ["Rapide", "Réfléchi", "Très analytique", "Je compare longtemps"],
+  },
+  {
+    key: "priority",
+    label: "Préférence d’accompagnement",
+    options: ["Simple et direct", "Équilibré", "Très détaillé", "Très guidé"],
+  },
+] as const;
+
 export default function ProfilPage() {
   const { user, loading: authLoading } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [budget, setBudget] = useState("Equilibre");
-  const [priority, setPriority] = useState("Fiabilite");
-  const [horizon, setHorizon] = useState("3-5 ans");
-  const [usage, setUsage] = useState("Foyer standard");
-  const [risk, setRisk] = useState("Prudent");
+  const [budget, setBudget] = useState("Équilibre");
+  const [priority, setPriority] = useState("Équilibré");
+  const [horizon, setHorizon] = useState("Réfléchi");
+  const [usage, setUsage] = useState("2 personnes");
+  const [risk, setRisk] = useState("Appartement");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [region, setRegion] = useState("");
@@ -73,11 +99,11 @@ export default function ProfilPage() {
       setStats(profileStats);
 
       if (userProfile) {
-        setBudget(userProfile.budget || "Equilibre");
-        setPriority(userProfile.priority || "Fiabilite");
-        setHorizon(userProfile.horizon || "3-5 ans");
-        setUsage(userProfile.usage || "Foyer standard");
-        setRisk(userProfile.risk || "Prudent");
+        setBudget(userProfile.budget || "Équilibre");
+        setPriority(userProfile.priority || "Équilibré");
+        setHorizon(userProfile.horizon || "Réfléchi");
+        setUsage(userProfile.usage || "2 personnes");
+        setRisk(userProfile.risk || "Appartement");
       }
 
       const savedLocation = getUserLocation();
@@ -115,7 +141,7 @@ export default function ProfilPage() {
         <EmptyState
           icon={<UserCircle2 className="h-8 w-8 text-gray-400" />}
           title="Aucun profil sans session active"
-          description="MAREF n invente ni progression ni badges si vous n etes pas connecte."
+          description="MAREF n’invente ni progression ni badges si vous n’êtes pas connecté."
           action={() => {
             window.location.href = "/login";
           }}
@@ -145,14 +171,23 @@ export default function ProfilPage() {
     });
 
     if (!ok) {
-      saveMessage.showMessage("Impossible d enregistrer vos preferences pour le moment.");
+      saveMessage.showMessage("Impossible d’enregistrer vos préférences pour le moment.");
       return;
     }
 
     saveUserLocation({ city, postalCode, region });
-    saveMessage.showMessage("Preferences enregistrees.");
+    saveMessage.showMessage("Préférences enregistrées.");
     setEditing(false);
   }
+
+  const currentPreferences = [
+    ["Taille du foyer", usage],
+    ["Type de logement", risk],
+    ["Rapport prix / qualité", budget],
+    ["Style de décision", horizon],
+    ["Préférence d’accompagnement", priority],
+    ["Localisation", [city, postalCode, region].filter(Boolean).join(" - ") || "À compléter"],
+  ] as const;
 
   return (
     <div className="space-y-5">
@@ -163,13 +198,13 @@ export default function ProfilPage() {
               {initials}
             </div>
             <div>
-              <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-blue-100/75">Profil decisionnel</p>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.2em] text-blue-100/75">Profil décisionnel</p>
               <h2 className="mt-2 text-2xl font-black">{userName}</h2>
               <p className="text-sm text-blue-100/80">{email}</p>
               <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
                 <Medal className="h-4 w-4" />
                 <span className="text-sm font-bold">{progress.currentLevel.name}</span>
-                <span className="text-xs text-blue-100/70">{progress.totalXp} XP reels</span>
+                <span className="text-xs text-blue-100/70">{progress.totalXp} XP réels</span>
               </div>
             </div>
           </div>
@@ -197,7 +232,7 @@ export default function ProfilPage() {
 
       <div className="rounded-[26px] border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-bold">Progression reelle</h3>
+          <h3 className="font-bold">Progression réelle</h3>
           <span className="text-sm font-bold text-blue-950">{progress.totalXp} XP</span>
         </div>
         <div className="mb-3 flex items-center gap-3">
@@ -215,13 +250,13 @@ export default function ProfilPage() {
         <p className="text-xs text-gray-500">
           {progress.nextLevel
             ? `${progress.nextLevel.xpNeeded - progress.totalXp} XP restants pour atteindre ${progress.nextLevel.name}`
-            : "Niveau maximal atteint pour les regles actuelles"}
+            : "Niveau maximal atteint pour les règles actuelles"}
         </p>
       </div>
 
       <div className="rounded-[26px] border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-bold">Actions comptabilisees</h3>
+          <h3 className="font-bold">Actions comptabilisées</h3>
           <span className="text-xs text-gray-400">
             {progress.tasks.filter((task) => task.completed).length} / {progress.tasks.length} valides
           </span>
@@ -265,7 +300,7 @@ export default function ProfilPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="rounded-[26px] border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-bold">Badges d activite</h3>
+            <h3 className="font-bold">Badges d’activité</h3>
             <span className="text-xs text-gray-400">
               {progress.activityBadges.filter((badge) => badge.completed).length} / {progress.activityBadges.length} obtenus
             </span>
@@ -289,7 +324,7 @@ export default function ProfilPage() {
                         (badge.completed ? "bg-white/10" : "bg-slate-200 text-blue-950")
                       }
                     >
-                      {badge.completed ? <Medal className="h-5 w-5" /> : <Compass className="h-5 w-5" />}
+                      {badge.completed ? <Medal className="h-5 w-5" /> : <Target className="h-5 w-5" />}
                     </div>
                     <div>
                       <p className="text-sm font-bold">{badge.name}</p>
@@ -313,8 +348,8 @@ export default function ProfilPage() {
           {progress.activityBadges.every((badge) => !badge.completed) && (
             <div className="mt-4">
               <NoDataBlock
-                title="Aucun badge d activite pour le moment"
-                description="Les badges ne tombent qu apres des actions reelles. Rien n est pre-rempli."
+                title="Aucun badge d’activité pour le moment"
+                description="Les badges ne tombent qu’après des actions réelles. Rien n’est prérempli."
               />
             </div>
           )}
@@ -333,7 +368,7 @@ export default function ProfilPage() {
                 key={badge.id}
                 className={
                   "rounded-[22px] border p-4 transition-all " +
-                  (badge.activeNow ? "border-blue-900 bg-gradient-to-br from-slate-50 to-blue-50" : "border-gray-100 bg-gray-50")
+                  (badge.activeNow ? "border-blue-950 bg-gradient-to-br from-slate-50 to-blue-50" : "border-gray-100 bg-gray-50")
                 }
               >
                 <div className="flex items-start justify-between gap-3">
@@ -353,7 +388,7 @@ export default function ProfilPage() {
                       (badge.activeNow ? "bg-blue-950 text-white" : "bg-gray-200 text-gray-600")
                     }
                   >
-                    {badge.activeNow ? "Active" : "A venir"}
+                    {badge.activeNow ? "Active" : "À venir"}
                   </span>
                 </div>
               </div>
@@ -362,7 +397,7 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      <IncompleteDataWarning description="Les XP et badges d activite restent bases sur des actions reelles. Les badges saison servent de reperes calendaires tant qu un suivi evenementiel verifiable n est pas branche." />
+      <IncompleteDataWarning description="Les XP et badges d’activité restent basés sur des actions réelles. Les badges saison servent de repères calendaires tant qu’un suivi événementiel vérifiable n’est pas branché." />
 
       <div className="relative rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
         <span className="absolute left-4 top-[-10px] rounded-md bg-blue-950 px-2.5 py-0.5 text-[0.7rem] font-bold text-white shadow-sm">Mimo</span>
@@ -373,7 +408,9 @@ export default function ProfilPage() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="font-bold">Votre cadrage utilisateur</h3>
-            <p className="mt-1 text-sm text-gray-500">Des preferences utiles au produit, au score contextualise et aux recommandations locales.</p>
+            <p className="mt-1 text-sm text-gray-500">
+              Ces réponses servent à personnaliser l’expérience, le score contextualisé et le comportement de Mimo.
+            </p>
           </div>
           <button
             onClick={() => setEditing((current) => !current)}
@@ -388,26 +425,44 @@ export default function ProfilPage() {
 
         {editing ? (
           <div className="space-y-3">
-            {[
-              { key: "budget", label: "Cadre budgetaire", value: budget, setter: setBudget, options: ["Serre", "Equilibre", "Confortable", "Flexible"] },
-              { key: "usage", label: "Intensite d usage", value: usage, setter: setUsage, options: ["Usage occasionnel", "Foyer standard", "Usage intensif", "Usage expert"] },
-              { key: "priority", label: "Priorite d achat", value: priority, setter: setPriority, options: ["Fiabilite", "Prix", "Simplicite", "Durabilite", "Performance"] },
-              { key: "horizon", label: "Horizon de conservation", value: horizon, setter: setHorizon, options: ["1-2 ans", "3-5 ans", "5-8 ans", "8+ ans"] },
-              { key: "risk", label: "Tolerance au risque", value: risk, setter: setRisk, options: ["Prudent", "Equilibre", "Ouvert au reconditionne"] },
-            ].map((preference) => (
-              <div key={preference.key}>
-                <label className="mb-1 block text-xs font-semibold text-gray-500">{preference.label}</label>
-                <select
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950"
-                  value={preference.value}
-                  onChange={(event) => preference.setter(event.target.value)}
-                >
-                  {preference.options.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-            ))}
+            {preferenceFields.map((preference) => {
+              const value =
+                preference.key === "usage"
+                  ? usage
+                  : preference.key === "risk"
+                    ? risk
+                    : preference.key === "budget"
+                      ? budget
+                      : preference.key === "horizon"
+                        ? horizon
+                        : priority;
+
+              const setter =
+                preference.key === "usage"
+                  ? setUsage
+                  : preference.key === "risk"
+                    ? setRisk
+                    : preference.key === "budget"
+                      ? setBudget
+                      : preference.key === "horizon"
+                        ? setHorizon
+                        : setPriority;
+
+              return (
+                <div key={preference.key}>
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">{preference.label}</label>
+                  <select
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950"
+                    value={value}
+                    onChange={(event) => setter(event.target.value)}
+                  >
+                    {preference.options.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
 
             <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
               <div className="mb-3 flex items-center gap-2">
@@ -415,20 +470,20 @@ export default function ProfilPage() {
                 <p className="text-sm font-bold text-slate-900">Localisation utile au produit</p>
               </div>
               <p className="mb-3 text-xs leading-6 text-gray-500">
-                Votre localisation aide MAREF a privilegier des offres pertinentes autour de chez vous quand cette information est disponible.
+                Votre localisation aide MAREF à privilégier des offres pertinentes autour de chez vous quand cette information est disponible.
               </p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-gray-500">Ville</label>
-                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ex: Lille" />
+                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={city} onChange={(event) => setCity(event.target.value)} placeholder="Ex : Lille" />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-semibold text-gray-500">Code postal</label>
-                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="Ex: 59000" />
+                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="Ex : 59000" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold text-gray-500">Region</label>
-                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={region} onChange={(event) => setRegion(event.target.value)} placeholder="Ex: Hauts-de-France" />
+                  <label className="mb-1 block text-xs font-semibold text-gray-500">Région</label>
+                  <input className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-blue-950" value={region} onChange={(event) => setRegion(event.target.value)} placeholder="Ex : Hauts-de-France" />
                 </div>
               </div>
             </div>
@@ -439,14 +494,7 @@ export default function ProfilPage() {
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
-            {[
-              ["Cadre budgetaire", budget],
-              ["Intensite d usage", usage],
-              ["Priorite d achat", priority],
-              ["Horizon de conservation", horizon],
-              ["Tolerance au risque", risk],
-              ["Localisation", [city, postalCode, region].filter(Boolean).join(" - ") || "A completer"],
-            ].map(([label, value]) => (
+            {currentPreferences.map(([label, value]) => (
               <div key={label} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2">
                   {preferenceIcons[label as keyof typeof preferenceIcons]}
@@ -480,15 +528,15 @@ export default function ProfilPage() {
         </Link>
         <Link href="/parametres" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-md">
           <Settings className="h-5 w-5 text-blue-950" />
-          <span className="text-sm font-semibold">Parametres</span>
+          <span className="text-sm font-semibold">Paramètres</span>
         </Link>
       </div>
 
       {stats.projects === 0 && stats.favorites === 0 && stats.comparisons === 0 && (
         <EmptyState
           icon={<Target className="h-8 w-8 text-gray-400" />}
-          title="Aucune activite exploitable"
-          description="Votre profil commencera a se remplir quand vous creerez un projet, ajouterez des favoris ou lancerez une comparaison."
+          title="Aucune activité exploitable"
+          description="Votre profil commencera à se remplir quand vous créerez un projet, ajouterez des favoris ou lancerez une comparaison."
         />
       )}
     </div>

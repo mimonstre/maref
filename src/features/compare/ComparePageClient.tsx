@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Layers3, Search } from "lucide-react";
+import AuthRequiredPage from "@/components/auth/AuthRequiredPage";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   EmptyState,
   IncompleteDataWarning,
@@ -28,6 +30,7 @@ import type { Offer } from "@/lib/data";
 import { getOfferDisplayScore, rankOffersByScore } from "@/lib/score/engine";
 
 export default function ComparePageClient() {
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { message, showMessage } = useTimedMessage();
@@ -144,13 +147,22 @@ export default function ComparePageClient() {
   const readyFamilies = groupsWithOffers.filter((item) => item.offers.length >= 2).length;
 
   useEffect(() => {
-    if (didCountComparisonRef.current || readyFamilies === 0) {
+    if (!user || didCountComparisonRef.current || readyFamilies === 0) {
       return;
     }
 
     didCountComparisonRef.current = true;
     void incrementCompareCount();
-  }, [readyFamilies]);
+  }, [readyFamilies, user]);
+
+  if (authLoading || !user) {
+    return (
+      <AuthRequiredPage
+        title="Comparateur réservé aux comptes connectés"
+        description="Connectez-vous pour conserver vos comparaisons par famille et retrouver vos arbitrages."
+      />
+    );
+  }
 
   function handleAddOffer(offer: Offer) {
     const result = addOfferToCompareGroups(offer);

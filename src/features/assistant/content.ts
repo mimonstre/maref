@@ -357,7 +357,11 @@ export function getMimoResponse(input: string, context?: MimoContext): string {
     );
   }
 
-  return buildAnalyticalFallback(input, context);
+  return (
+    "Je peux vous aider, même si la question sort un peu du cadre MAREF. " +
+    buildAnalyticalFallback(input, context) +
+    " Si vous voulez, je peux soit répondre de façon générale, soit raccrocher le sujet à un achat concret."
+  );
 }
 
 export function getMimoContextualResponse(input: string, context: MimoContext): string {
