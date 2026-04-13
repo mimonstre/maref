@@ -68,7 +68,7 @@ async function getCurrentUserId() {
 }
 
 function isDemoCatalogEnabled() {
-  return process.env.NEXT_PUBLIC_MAREF_DEMO_CATALOG === "true";
+  return process.env.NEXT_PUBLIC_MAREF_DEMO_CATALOG !== "false";
 }
 
 function getDemoCatalog(filters?: {
