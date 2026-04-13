@@ -9,6 +9,10 @@ export type MimoContext = {
   favCount?: number;
   preferredBudget?: string;
   preferredPriority?: string;
+  decisionStyle?: string;
+  household?: string;
+  housingType?: string;
+  supportStyle?: string;
   hasProjects?: boolean;
   totalOffers?: number;
   recentSearches?: string[];
@@ -17,353 +21,215 @@ export type MimoContext = {
 };
 
 export const ASSISTANT_SUGGESTIONS = [
-  "Mes meilleurs choix actuels",
-  "Aide-moi a cadrer mon besoin",
-  "Comment fonctionne le score ?",
-  "Que signifie PEFAS ?",
-  "Aide-moi a comparer",
-  "Conseils pour mon budget",
+  "Aide-moi à cadrer mon besoin",
+  "Que penses-tu de mon projet actuel ?",
+  "Explique-moi le score MAREF",
+  "Comment bien comparer 2 ou 3 offres ?",
+  "Quelles erreurs éviter avant d’acheter ?",
+  "Par quoi commencer pour choisir ?",
 ];
 
-// ---------------------------------------------------------------------------
-// Response variants – each key has at least 2 variants, randomly picked
-// ---------------------------------------------------------------------------
+type IntentKey =
+  | "score"
+  | "pefas"
+  | "besoin"
+  | "comparaison"
+  | "projet"
+  | "favoris"
+  | "budget"
+  | "risque"
+  | "fiche"
+  | "marchand"
+  | "garantie"
+  | "livraison"
+  | "meilleur"
+  | "guide"
+  | "mimo"
+  | "hors_sujet"
+  | "bonjour"
+  | "merci";
 
-type ResponseVariants = string[];
-
-const RESPONSE_MAP: Record<string, ResponseVariants> = {
-  // --- Score ---
+const RESPONSE_MAP: Record<IntentKey, string[]> = {
   score: [
-    "Le Score MAREF evalue chaque offre sur 100 points en combinant 5 axes : Pertinence, Economie, Fluidite, Assurance et Stabilite. Un score de 85+ est excellent, 70-84 tres bon, 55-69 correct. Conseil : regardez aussi les axes individuels, pas seulement la note globale.",
-    "Le score global est une synthese ponderee des 5 axes PEFAS. Ce n est pas une simple moyenne : chaque axe est pondere selon votre profil et votre contexte projet. Un acheteur qui privilege la durabilite verra l axe S (Stabilite) plus fortement valorise.",
+    "Le score MAREF sert à lire une offre marchande, pas une fiche produit. Il synthétise cinq axes : Pertinence, Économie, Fluidité, Assurance et Stabilité. La bonne lecture consiste à regarder la note globale puis les axes qui tirent la décision vers le haut ou vers le bas.",
+    "Le score MAREF vous aide à arbitrer entre plusieurs offres comparables. Une note élevée est utile, mais elle n’a de sens que si elle reste cohérente avec votre besoin, votre budget, le marchand et les points de vigilance visibles sur l’offre.",
   ],
-
-  // --- PEFAS general ---
   pefas: [
-    "PEFAS = Pertinence, Economie, Fluidite, Assurance, Stabilite. Chaque axe est note sur 100. La Pertinence mesure l adequation au besoin, l Economie le rapport cout/valeur, la Fluidite la facilite d achat, l Assurance la fiabilite marchande, la Stabilite la perenni­te produit/marque.",
-    "Les 5 axes PEFAS sont complementaires : une offre peut avoir un excellent prix (E eleve) mais une garantie faible (A basse). MAREF vous montre ces desequilibres pour que vous achetiez en connaissance de cause, pas juste sur l etiquette de prix.",
-  ],
-
-  // --- Pertinence (P) ---
-  pertinence: [
-    "L axe Pertinence (P) mesure si l offre repond vraiment a votre besoin. Une machine a laver 7 kg pour un celibataire peut etre tres pertinente (P=90), mais surdimensionnee pour un studio (P=55). Definissez votre usage reel avant tout.",
-    "La Pertinence evalue l adequation technique au besoin declare. Conseil : remplissez votre profil decision (usage, horizon, intensite) pour que MAREF calibre cet axe sur votre situation reelle.",
-  ],
-
-  // --- Economie (E) ---
-  economie: [
-    "L axe Economie (E) va au-dela du prix affiché : il integre le cout total etendu (achat + usage + maintenance sur la duree). Un appareil moins cher a l achat peut couter plus cher sur 5 ans. Regardez toujours le E avant de decider sur le prix.",
-    "Economie ne veut pas dire « le moins cher ». MAREF calcule un indice cout/valeur : si une offre a un bon E, c est qu elle delivre beaucoup pour son prix. Parfois payer 10% de plus achete 30% de valeur supplementaire.",
-  ],
-
-  // --- Fluidite (F) ---
-  fluidite: [
-    "L axe Fluidite (F) evalue la facilite de l experience d achat : disponibilite immediate, livraison rapide, retour simple, service client accessible. Un score F bas signifie des frictions potentielles : delais, rupture, SAV difficile.",
-    "La Fluidite mesure ce que vous vivrez apres avoir clique sur Acheter. Livraison en 24h, stock confirme, politique de retour claire : ces elements sont scorises. Un F > 75 indique une experience d achat sereine.",
-  ],
-
-  // --- Assurance (A) ---
-  assurance: [
-    "L axe Assurance (A) couvre la confiance marchande : reputation du vendeur, garantie proposee, politique SAV, historique de fiabilite. Un A eleve signifie que vous etes protege si quelque chose tourne mal.",
-    "L Assurance note la securite de votre achat : garantie legale + commerciale, marchand verifie, politique de retour honnete. Ne negligez pas cet axe, surtout sur les produits techniques ou onereu­x.",
-  ],
-
-  // --- Stabilite (S) ---
-  stabilite: [
-    "L axe Stabilite (S) evalue la perenni­te de l offre : la marque est-elle solide ? Le modele va-t-il continuer a etre supporte ? Les prix sont-ils stables ? Un S eleve protege votre investissement dans la duree.",
-    "La Stabilite anticipe les risques a moyen terme : obsolescence, discontinuation, instabilite tarifaire. Pour les achats sur 5 ans ou plus, cet axe est critique. Privilegiez un S > 70 sur les electromenager et electronique grand public.",
-  ],
-
-  // --- Comparaison ---
-  comparaison: [
-    "Pour comparer efficacement, selectionnez 2 a 3 offres dans l Explorer et rendez-vous dans la section Comparer. Je vous montrerai les differences axe par axe, le cout total etendu, et je vous dirai laquelle est la plus adaptee a votre profil.",
-    "La comparaison MAREF va au-dela des fiches techniques : elle analyse les ecarts sur chaque axe PEFAS et calcule un gagnant contextualise par votre profil. Astuce : ajoutez une offre budget et une offre premium pour visualiser le saut de valeur.",
-  ],
-
-  // --- Favoris ---
-  favoris: [
-    "Vos offres en favoris sont accessibles dans la section Favoris. Conseil : ajoutez plusieurs offres d une meme categorie pour les comparer sereinement avant de decider, sans perdre vos recherches.",
-    "Les favoris servent d espace de reflexion : ajoutez les offres qui vous interessent, laissez reposer 24h, puis revenez les comparer. Les decisions prises apres une nuit de recul sont generalement meilleures.",
-  ],
-
-  // --- Projet ---
-  projet: [
-    "Un projet MAREF vous permet de regrouper les offres que vous evaluez pour un meme besoin (ex : renovation cuisine). Toutes les offres ajoutees sont comparees dans leur contexte : budget cible, objectif, duree d usage.",
-    "Creez un projet pour chaque decision d achat importante. MAREF adapte alors le score de chaque offre a votre contexte specifique : deux offres identiques peuvent avoir des scores differents selon le projet dans lequel vous les evaluez.",
-  ],
-
-  // --- Bonne affaire ---
-  "bonne affaire": [
-    "Une bonne affaire selon MAREF n est pas forcement l offre la moins chere : c est celle qui offre le meilleur rapport score/prix. Cherchez les offres avec un score MAREF superieur a 80 et un axe Economie superieur a 75.",
-    "Les vraies bonnes affaires combinent un score global solide ET un E (Economie) eleve. Evitez les offres ou le prix barre est artificiel (prix reference gonfle). MAREF signale ces cas dans les vigilances.",
-  ],
-
-  // --- Garantie ---
-  garantie: [
-    "La garantie est integree dans l axe Assurance (A). Attention : la garantie legale de 2 ans s applique partout en France, mais la garantie commerciale du marchand fait toute la difference pour la simplicite du retour SAV.",
-    "Une garantie de 3 ans ou plus est un signal positif de confiance du fabricant dans son produit. MAREF valorise les garanties etendues dans l axe A. Pour les produits reconditiones, verifiez la duree : minimum 12 mois recommandes.",
-  ],
-
-  // --- Marchand ---
-  marchand: [
-    "MAREF evalue les marchands sur leur historique de livraison, politique de retour, disponibilite du SAV et avis verifies. L axe Assurance (A) reflate directement la fiabilite marchande. Privilegiez un A > 70 pour les achats importants.",
-    "Tous les marchands ne se valent pas : certains affi­chent des prix attractifs mais ont un SAV defaillant. MAREF integre des donnees de fiabilite marchande dans l axe A pour vous alerter avant que vous ne commandez.",
-  ],
-
-  // --- Livraison ---
-  livraison: [
-    "La livraison est scorisee dans l axe Fluidite (F) : delai annonce, disponibilite confirmee, suivi de commande. Un F eleve indique une livraison rapide et fiable. Conseil : verifiez toujours la date de disponibilite avant d acheter.",
-    "Les delais de livraison affiches ne sont pas toujours respectes. MAREF croise les donnees de disponibilite reelle avec les promesses marchandes. Si le F est bas, attendez-vous a des frictions potentielles.",
-  ],
-
-  // --- Retour ---
-  retour: [
-    "La politique de retour est un element cle : verifiez le delai (14 jours minimum legalement, 30 jours recommandes), les frais de retour a votre charge, et les conditions d etat du produit. Tout cela impacte l axe A.",
-    "Un retour facile est un signal de marchand confiant dans ses produits. Les marchands qui compliquent les retours le font souvent parce qu ils savent que le taux de problemes est eleve. Privilegiez les retours gratuits et sans questions.",
-  ],
-
-  // --- Budget ---
-  budget: [
-    "Avec un budget serre, concentrez-vous sur les offres avec un bon score Economie (E > 70). Le cout total etendu peut surprendre : mieux vaut parfois payer 15% de plus a l achat si l appareil consomme 30% moins sur 5 ans.",
-    "Definissez votre budget avec une marge de 10-15% : les meilleures offres ne tombent pas toujours exactement sur le budget cible. MAREF vous permet de parametrer votre budget dans le profil et dans chaque projet.",
-  ],
-
-  // --- Durabilite ---
-  durabilite: [
-    "La durabilite est evaluee via l axe Stabilite (S) et partiellement via Economie (E). Les produits durables ont generalement un cout total etendu plus faible. Privilegiez les marques avec un bon historique de disponibilite des pieces detachees.",
-    "Un produit durable reduit votre empreinte et votre cout sur la duree. MAREF integre l indice de reparabilite quand il est disponible dans l axe S. Visez S > 70 pour les achats que vous souhaitez garder plus de 5 ans.",
-  ],
-
-  // --- Fiabilite ---
-  fiabilite: [
-    "La fiabilite combine l axe Assurance (A) et l axe Stabilite (S) : fiabilite marchande d un cote, perenni­te produit de l autre. Un double score > 75 sur ces deux axes est le signal d un achat serein.",
-    "Pour evaluer la fiabilite, regardez les vigilances signalee par Mimo sur chaque offre. Si aucune vigilance n est listee et que A et S sont tous deux au-dessus de 70, vous pouvez acheter avec confiance.",
-  ],
-
-  // --- Mimo lui-meme ---
-  mimo: [
-    "Je suis Mimo, l assistant decisionnel de MAREF. Je ne vends rien, je ne suis pas paye par les marchands. Mon seul objectif : vous aider a choisir intelligemment, proteger votre pouvoir d achat, eviter les mauvaises surprises.",
-    "Mimo (c est moi !) analyse les offres avec le framework PEFAS et contextualise les scores selon votre profil. Je combine des donnees structurees, des regles metier et votre contexte pour vous donner un avis neutre et actionnable.",
-  ],
-
-  // --- Meilleur choix / recommandation ---
-  meilleur: [
-    "La meilleure offre est celle qui aligne le mieux le score global, le budget, l horizon d usage et votre priorite principale. MAREF la calcule pour vous dans la section Comparer ou dans un projet. Aucune offre n est universellement la meilleure.",
-    "D apres le top des offres actuellement analysees, privilegiez celles avec un score > 80 et un axe Economie > 70. Elles offrent le meilleur rapport qualite globale / valeur marche. Consultez l Explorer pour voir le classement en temps reel.",
-  ],
-
-  // --- Guide / aide ---
-  aide: [
-    "Je peux vous aider sur : le fonctionnement du score PEFAS, l analyse d une offre, la comparaison entre produits, la gestion de vos projets et favoris, ou simplement vous orienter vers la bonne section. Posez votre question !",
-    "Pour bien demarrer sur MAREF : (1) completez votre profil decision, (2) explorez les offres par categorie, (3) sauvegardez vos favoris, (4) creez un projet pour votre achat principal. Je suis la pour vous guider a chaque etape.",
+    "PEFAS veut dire Pertinence, Économie, Fluidité, Assurance et Stabilité. Chaque axe répond à une question différente : est-ce adapté à votre besoin, est-ce rentable, est-ce simple à acheter, est-ce rassurant côté marchand, et est-ce solide dans le temps ?",
+    "Les axes PEFAS servent à éviter les décisions trop simplistes. Une offre peut être bonne en prix mais faible en garantie, ou très pertinente techniquement mais peu rassurante côté marchand. C’est justement cette lecture que MAREF rend plus visible.",
   ],
   besoin: [
-    "Pour bien cadrer votre besoin, dites-moi la famille de produit, le budget cible, les 2 ou 3 criteres non negociables et votre horizon d usage. Je pourrai alors vous dire quoi comparer et quoi ignorer.",
-    "On peut repartir du besoin proprement : quel produit cherchez-vous, pour qui, dans quel contexte, avec quelles contraintes reelles ? Une fois cela pose, je peux vous guider vers les bonnes sous-categories et les bons arbitrages.",
+    "Pour cadrer un besoin proprement, il faut d’abord fixer trois choses : l’usage réel, les contraintes non négociables et le niveau d’exigence accepté. Si vous me donnez la famille de produit et ces trois éléments, je peux vous aider à poser une vraie short-list.",
+    "Le bon point de départ n’est pas la promo, ni la marque, ni la fiche la plus spectaculaire. Le bon point de départ, c’est votre contexte : pour qui, à quelle fréquence, dans quel espace, avec quel niveau d’exigence et quelle durée d’usage.",
   ],
-  location: [
-    "Si vous renseignez votre localisation dans le profil, MAREF peut privilegier les offres et signaux utiles autour de chez vous quand ces donnees existent. Cela sert surtout a contextualiser la recommandation, pas a inventer une disponibilite locale.",
-    "La localisation ne sert pas au decor. Elle aide a prioriser des offres plus pertinentes localement quand l information existe et a mieux cadrer la decision selon votre zone.",
+  comparaison: [
+    "Une bonne comparaison MAREF se fait idéalement sur 2 ou 3 offres d’une même famille. Au-delà, le bruit augmente. On lit d’abord les écarts de score et d’axes, puis seulement les données techniques qui expliquent ces écarts.",
+    "Comparer correctement, ce n’est pas aligner le plus de lignes possible. C’est isoler les critères qui changent vraiment la décision : capacité, bruit, autonomie, garantie, dimensions, technologie, cadre marchand ou stabilité de l’offre.",
   ],
-  technique: [
-    "Pour lire une fiche technique sans se perdre, il faut separer les specs structurantes des specs secondaires. Dites-moi la famille de produit et je vous dirai exactement quoi regarder en priorite.",
-    "Les donnees techniques ne valent que si elles sont reliees a votre usage. Je peux vous aider a traduire une fiche en impact concret : bruit, autonomie, capacite, dimensions, memoire, garantie ou risque.",
+  projet: [
+    "Un projet sert à réunir plusieurs offres autour d’un même achat à arbitrer. C’est la meilleure façon de relier budget, objectif, références et comparaison, au lieu de laisser des offres isolées flotter sans contexte.",
+    "La vraie force d’un projet MAREF, c’est qu’il vous oblige à donner une forme à votre décision : un objectif, une famille, des offres suivies et un moment où il faut trancher. C’est ce qui fait passer d’un catalogue à un choix argumenté.",
   ],
-
-  // --- Salutation ---
+  favoris: [
+    "Les favoris doivent servir à garder une short-list temporaire, pas à empiler sans fin. Si vous en avez beaucoup, la meilleure suite est souvent de les répartir par projet ou d’en envoyer 2 ou 3 dans le comparateur.",
+    "Un favori est utile s’il mène à une action : comparer, ajouter à un projet, ou éliminer. Si une offre reste longtemps en favori sans avancer, c’est souvent qu’il manque un critère de décision clair.",
+  ],
+  budget: [
+    "Le budget ne doit pas être lu comme un plafond abstrait. Il faut le relier au niveau d’usage, au coût d’erreur acceptable et à la durée prévue de conservation. Un achat un peu plus cher peut être plus cohérent si le risque baisse nettement.",
+    "Quand le budget est serré, la bonne méthode consiste à protéger les critères non négociables et à assumer clairement les concessions secondaires. Je peux vous aider à faire cette hiérarchie si vous me dites ce qui compte le plus.",
+  ],
+  risque: [
+    "Le risque d’une offre ne vient pas seulement du produit. Il vient aussi du manque d’information, du vendeur, de la garantie, de la disponibilité réelle et de la difficulté à corriger un mauvais achat. C’est là que MAREF doit vous ralentir plutôt que vous pousser.",
+    "Quand une offre semble séduisante mais que la donnée est pauvre, la bonne posture n’est pas d’inventer le reste. C’est d’assumer que la comparaison devient partielle. Je peux vous aider à repérer ce qui manque vraiment avant de décider.",
+  ],
+  fiche: [
+    "Une fiche produit doit vous aider à comprendre le produit lui-même. Une offre marchande, elle, ajoute le marchand, le prix, la garantie, la livraison et le score MAREF. C’est une distinction importante pour éviter les malentendus dans la décision.",
+    "Pour lire une fiche sans se perdre, il faut distinguer les caractéristiques structurantes des détails secondaires. Dites-moi la famille de produit et je peux vous dire exactement quelles données comptent vraiment.",
+  ],
+  marchand: [
+    "Le marchand compte davantage qu’on ne le croit. Une offre proche en prix peut devenir moins intéressante si la garantie est faible, la politique de retour opaque ou la livraison peu fiable. C’est précisément pour cela que le score n’est pas uniquement technique.",
+    "Un bon vendeur ne se résume pas à un logo connu. Il faut regarder la clarté des conditions, la lisibilité de l’offre, la cohérence des promesses et le niveau de rassurance si quelque chose tourne mal après l’achat.",
+  ],
+  garantie: [
+    "La garantie est un signal utile, mais elle doit être lue avec le reste : marchand, retour, lisibilité des conditions et stabilité de l’offre. Une garantie longue aide, mais elle ne corrige pas un vendeur flou ou une fiche pauvre.",
+    "Sur les achats techniques ou chers, la garantie fait partie des critères qui protègent vraiment la décision. Une offre légèrement plus chère peut rester meilleure si elle réduit fortement le risque après achat.",
+  ],
+  livraison: [
+    "La livraison influence la qualité réelle de l’offre : délai, fiabilité, coût, clarté et capacité à tenir la promesse. Ce n’est pas juste un détail logistique, c’est une partie du confort d’achat.",
+    "Quand la livraison est floue, la fluidité baisse mécaniquement. Une offre très compétitive peut perdre beaucoup d’intérêt si le délai, la disponibilité ou le retour ne sont pas clairs.",
+  ],
+  meilleur: [
+    "La meilleure offre n’est jamais universelle. C’est celle qui aligne le mieux votre besoin, votre niveau d’exigence, votre tolérance au risque et le cadre marchand concret. Si vous me donnez la famille ou le projet concerné, je peux raisonner proprement avec vous.",
+    "Pour trouver ce qui est le mieux pour vous, il faut choisir le bon angle : meilleure valeur, meilleur équilibre, meilleur niveau de sécurité, ou meilleur rapport qualité/prix selon votre contexte. Je peux vous aider à poser cet angle avant de trancher.",
+  ],
+  guide: [
+    "Le guide sert à rendre vos décisions plus solides, pas à empiler des contenus théoriques. Il est le plus utile quand vous l’utilisez juste avant une vraie comparaison ou un vrai arbitrage.",
+    "Si vous hésitez, je peux vous orienter vers le bon module du guide selon votre situation : cadrer un besoin, lire une offre, comparer proprement ou sécuriser un achat.",
+  ],
+  mimo: [
+    "Je suis Mimo, l’assistant décisionnel de MAREF. Mon rôle n’est pas de faire du marketing. Mon rôle est de rendre une décision plus claire, plus argumentée et plus honnête quand l’information est incomplète.",
+    "Je peux vous aider sur le produit, sur vos projets, sur la lecture d’une offre, sur une comparaison, et aussi sur des questions plus générales tant que je reste clair sur ce qui relève du contexte MAREF et de ce qui n’en relève pas.",
+  ],
+  hors_sujet: [
+    "Je peux aussi répondre à une question plus générale si vous voulez. Je ne vais pas prétendre qu’elle vient du produit MAREF, mais je peux quand même vous aider proprement, puis éventuellement rattacher la réponse à une décision d’achat si c’est utile.",
+    "Même hors du cadre direct de MAREF, je peux essayer d’être utile. Donnez-moi juste votre objectif, et je vous répondrai clairement en distinguant ce qui relève du bon sens général et ce qui dépendrait de données produit réelles.",
+  ],
   bonjour: [
-    "Bonjour ! Je suis Mimo, votre assistant decisionnel MAREF. Posez-moi n importe quelle question sur les offres, le score, vos projets ou vos favoris.",
-    "Salut ! Mimo a votre service. Je suis la pour vous aider a decider intelligemment. Que voulez-vous analyser aujourd hui ?",
+    "Bonjour. Je suis Mimo. Dites-moi ce que vous essayez d’acheter, de comparer ou de comprendre, et je vous aide à poser une décision propre.",
+    "Bonjour. On peut partir d’un besoin, d’une famille de produit, d’un projet, d’une comparaison ou d’une question libre. Je m’adapte.",
   ],
-
-  // --- Merci ---
   merci: [
-    "Avec plaisir ! N hesitez pas si vous avez d autres questions. Mon seul objectif : vous aider a faire le meilleur choix possible.",
-    "De rien ! Si vous avez un doute sur une offre ou une comparaison, revenez quand vous voulez. C est pour ca que je suis la.",
+    "Avec plaisir. Si vous voulez, on peut continuer en cadrant le besoin, en lisant une offre ou en préparant une comparaison propre.",
+    "Avec plaisir. Si un doute reste flou, reformulez-le comme une décision concrète à prendre et je vous aiderai plus directement.",
   ],
 };
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-function pick(variants: string[]): string {
+function pick(variants: string[]) {
   return variants[Math.floor(Math.random() * variants.length)];
 }
 
-function matchKeyword(lower: string): string | null {
-  // Order matters: more specific patterns first
-  const rules: [RegExp | string, string][] = [
-    [/\bpertinence\b|\baxe p\b/, "pertinence"],
-    [/\beconomie\b|\baxe e\b/, "economie"],
-    [/\bfluidite\b|\baxe f\b/, "fluidite"],
-    [/\bassurance\b|\baxe a\b/, "assurance"],
-    [/\bstabilite\b|\baxe s\b/, "stabilite"],
-    [/\bpefas\b|\bcinq axe|\b5 axe/, "pefas"],
-    [/\bscore\b|\bnotation\b|\bevaluation\b/, "score"],
-    [/\bcompar/, "comparaison"],
-    [/\bfavori/, "favoris"],
-    [/\bprojet\b/, "projet"],
-    [/\bbonne affaire\b|\bpromo\b|\bsolde\b|\baffaire\b/, "bonne affaire"],
-    [/\bgaranti/, "garantie"],
-    [/\bmarchand\b|\bvendeur\b|\bshop\b/, "marchand"],
-    [/\blivraison\b|\bdelai\b|\bexpedition\b/, "livraison"],
-    [/\bretour\b|\bremboursement\b/, "retour"],
-    [/\bbudget\b|\bprix\b|\bcout\b|\bcher\b/, "budget"],
-    [/\bdurabilit/, "durabilite"],
-    [/\bfiabilit/, "fiabilite"],
-    [/\bmimo\b|\btu es qui\b|\bqui es-tu\b/, "mimo"],
-    [/\bmeilleur\b|\brecommand|\bconseill/, "meilleur"],
-    [/\bbesoin\b|\bchoisir\b|\bcadrer\b/, "besoin"],
-    [/\blocalisation\b|\bautour de chez moi\b|\bpres de chez moi\b/, "location"],
-    [/\btechnique\b|\bspec\b|\bfiche produit\b|\bcaracterist/, "technique"],
-    [/\bbonjour\b|\bsalut\b|\bhello\b|\bhi\b/, "bonjour"],
-    [/\bmerci\b|\bthanks\b/, "merci"],
-    [/\baide\b|\baider\b|\bcomment\b|\bquoi\b|\bque faire\b/, "aide"],
+function normalize(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function detectIntent(input: string): IntentKey | null {
+  const lower = normalize(input);
+  const rules: Array<{ key: IntentKey; patterns: Array<string | RegExp> }> = [
+    { key: "bonjour", patterns: [/\bbonjour\b/, /\bsalut\b/, /\bhello\b/, /\bbonsoir\b/] },
+    { key: "merci", patterns: [/\bmerci\b/, /\bthanks\b/, /\btop merci\b/] },
+    { key: "score", patterns: [/\bscore\b/, /\bnote\b/, /\bevaluation\b/] },
+    { key: "pefas", patterns: [/\bpefas\b/, /\bpertinence\b/, /\beconomie\b/, /\bfluidite\b/, /\bassurance\b/, /\bstabilite\b/] },
+    { key: "comparaison", patterns: [/\bcompar/, /\barbitr/, /\bface a\b/, /\bversus\b/, /\bvs\b/] },
+    { key: "projet", patterns: [/\bprojet\b/, /\bshort list\b/, /\bshortlist\b/] },
+    { key: "favoris", patterns: [/\bfavori\b/, /\bsauvegard/, /\bselection\b/] },
+    { key: "budget", patterns: [/\bbudget\b/, /\bprix\b/, /\bcher\b/, /\bmoins cher\b/, /\brapport qualite prix\b/] },
+    { key: "risque", patterns: [/\brisque\b/, /\bfiable\b/, /\bdoute\b/, /\bincertain\b/, /\bmanque d information\b/] },
+    { key: "fiche", patterns: [/\bfiche\b/, /\bspec\b/, /\bcaracter/, /\bdonnee technique\b/] },
+    { key: "marchand", patterns: [/\bmarchand\b/, /\bvendeur\b/, /\benseigne\b/, /\bsite marchand\b/] },
+    { key: "garantie", patterns: [/\bgaranti\b/, /\bsav\b/, /\bretour\b/] },
+    { key: "livraison", patterns: [/\blivraison\b/, /\bdelai\b/, /\bexpedition\b/, /\bstock\b/] },
+    { key: "meilleur", patterns: [/\bmeilleur\b/, /\brecommand/, /\bchoix\b/, /\bqu est ce qui est le mieux\b/] },
+    { key: "guide", patterns: [/\bguide\b/, /\bmodule\b/, /\bquiz\b/, /\bformation\b/] },
+    { key: "besoin", patterns: [/\bbesoin\b/, /\bchoisir\b/, /\bcomment choisir\b/, /\bcadrer\b/] },
+    { key: "mimo", patterns: [/\bmimo\b/, /\btu es qui\b/, /\bqui es tu\b/, /\bque peux tu faire\b/] },
   ];
 
-  for (const [pattern, key] of rules) {
-    if (typeof pattern === "string") {
-      if (lower.includes(pattern)) return key;
-    } else {
-      if (pattern.test(lower)) return key;
+  for (const rule of rules) {
+    if (rule.patterns.some((pattern) => (typeof pattern === "string" ? lower.includes(pattern) : pattern.test(lower)))) {
+      return rule.key;
     }
   }
+
+  if (lower.includes("meteo") || lower.includes("recette") || lower.includes("vacances") || lower.includes("politique")) {
+    return "hors_sujet";
+  }
+
   return null;
 }
 
-function buildContextualPrefix(context: MimoContext, key: string): string {
+function buildContextPrefix(context?: MimoContext) {
   if (!context) return "";
 
-  if (key === "projet" && context.projects && context.projects.length > 0) {
-    const first = context.projects[0];
-    const count = context.projects.length;
-    return (
-      "Tu as " +
-      count +
-      " projet" +
-      (count > 1 ? "s" : "") +
-      " en cours. Ton projet principal est \"" +
-      first.name +
-      "\" avec " +
-      first.offers +
-      " offre" +
-      (first.offers > 1 ? "s" : "") +
-      " analysee" +
-      (first.offers > 1 ? "s" : "") +
-      (first.score > 0 ? " (score moyen : " + first.score + "/100)" : "") +
-      ". "
-    );
-  }
-
-  if (key === "favoris" && context.favCount !== undefined && context.favCount > 0) {
-    return (
-      "Tu as " +
-      context.favCount +
-      " offre" +
-      (context.favCount > 1 ? "s" : "") +
-      " sauvegardee" +
-      (context.favCount > 1 ? "s" : "") +
-      " en favoris. "
-    );
-  }
-
-  if (key === "budget" && context.preferredBudget) {
-    return "Ton profil indique un budget " + context.preferredBudget.toLowerCase() + ". ";
-  }
-
-  if (key === "meilleur" && context.preferredPriority) {
-    return "Avec ta priorite \"" + context.preferredPriority + "\", voici comment je vois les choses. ";
-  }
-
-  if (key === "comparaison" && context.recentSearches && context.recentSearches.length > 0) {
-    return "Tes dernieres recherches tournent autour de " + context.recentSearches.slice(0, 2).join(" et ") + ". ";
-  }
-
-  if (key === "meilleur" && context.recentViews && context.recentViews.length > 0) {
-    return "Parmi tes consultations recentes, je garderais en tete " + context.recentViews.slice(0, 2).join(" et ") + ". ";
-  }
-
-  return "";
-}
-
-function buildAnalyticalFallback(input: string, context?: MimoContext) {
   const fragments: string[] = [];
 
-  if (context?.projects && context.projects.length > 0) {
-    const project = context.projects[0];
+  if (context.projects?.length) {
+    const mainProject = context.projects[0];
     fragments.push(
-      `Votre projet le plus recent est ${project.name} avec ${project.offers} offre${project.offers > 1 ? "s" : ""}.`,
+      `Je vois ${context.projects.length} projet${context.projects.length > 1 ? "s" : ""}, dont ${mainProject.name} avec ${mainProject.offers} offre${mainProject.offers > 1 ? "s" : ""}.`,
     );
   }
 
-  if (context?.recentSearches && context.recentSearches.length > 0) {
-    fragments.push(`Vos recherches recentes tournent autour de ${context.recentSearches.slice(0, 2).join(" et ")}.`);
+  if (context.recentSearches?.length) {
+    fragments.push(`Vos dernières recherches portent sur ${context.recentSearches.slice(0, 2).join(" et ")}.`);
   }
 
-  if (context?.recentViews && context.recentViews.length > 0) {
-    fragments.push(`Vos dernieres fiches consultees incluent ${context.recentViews.slice(0, 2).join(" et ")}.`);
+  if (context.recentViews?.length) {
+    fragments.push(`Vos dernières consultations incluent ${context.recentViews.slice(0, 2).join(" et ")}.`);
   }
 
-  if (context?.preferredPriority) {
-    fragments.push(`Votre priorite declaree est ${context.preferredPriority.toLowerCase()}.`);
+  if (context.preferredPriority) {
+    fragments.push(`Votre priorité déclarée est ${context.preferredPriority.toLowerCase()}.`);
   }
 
-  const detectedNeed = input
-    .replace(/[?!.]/g, "")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 10)
-    .join(" ");
+  if (context.supportStyle) {
+    fragments.push(`Vous préférez un accompagnement ${context.supportStyle.toLowerCase()}.`);
+  }
 
-  return (
-    (fragments.length > 0 ? fragments.join(" ") + " " : "") +
-    "Je peux traiter cette demande, mais il me faut un angle plus explicite. " +
-    `Si vous parlez de "${detectedNeed}", dites-moi si vous voulez : cadrer le besoin, comprendre une fiche, comparer 2 ou 3 references, verifier le risque marchand, ou choisir la meilleure option selon votre contexte.`
-  );
+  return fragments.length > 0 ? fragments.join(" ") + " " : "";
 }
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+function buildClarifyingQuestion(input: string, context?: MimoContext) {
+  const prefix = buildContextPrefix(context);
+  return (
+    prefix +
+    `Je peux vous aider sur “${input.trim()}”, mais j’ai besoin d’un angle plus net. Dites-moi si vous voulez : comprendre une offre, comparer 2 ou 3 options, choisir la bonne famille de produit, ou sécuriser une décision déjà engagée.`
+  );
+}
 
 export function getMimoResponse(input: string, context?: MimoContext): string {
-  const lower = input.toLowerCase().trim();
-  const key = matchKeyword(lower);
-
-  if (key && RESPONSE_MAP[key]) {
-    const prefix = context ? buildContextualPrefix(context, key) : "";
-    return prefix + pick(RESPONSE_MAP[key]);
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return "Posez-moi votre question comme vous le feriez à un humain : besoin, doute, comparaison, budget, marchand ou simplement une idée d’achat à cadrer.";
   }
 
-  if (lower.includes("quel est le meilleur") || lower.includes("qu est ce qui est le mieux pour moi")) {
-    return buildContextualPrefix(context || {}, "meilleur") + pick(RESPONSE_MAP.meilleur);
+  const intent = detectIntent(trimmed);
+  if (intent && RESPONSE_MAP[intent]) {
+    return buildContextPrefix(context) + pick(RESPONSE_MAP[intent]);
   }
 
-  if (context?.recentSearches && context.recentSearches.length > 0) {
-    return (
-      "Je n ai pas compris exactement la demande, mais vos recherches recentes portent sur " +
-      context.recentSearches.slice(0, 3).join(", ") +
-      ". Je peux vous aider a comparer ces familles, expliquer le score, ou vous recommander un prochain arbitrage."
-    );
-  }
-
-  if (context?.projects && context.projects.length > 0) {
-    const name = context.projects[0].name;
-    return (
-      "Je n ai pas compris exactement votre question, mais je vois que vous avez un projet \"" +
-      name +
-      "\" en cours. Voulez-vous que je l analyse, que je compare les offres, ou que je vous explique un axe PEFAS ?"
-    );
+  if (context?.projects?.length || context?.recentSearches?.length || context?.recentViews?.length) {
+    return buildClarifyingQuestion(trimmed, context);
   }
 
   return (
-    "Je peux vous aider, même si la question sort un peu du cadre MAREF. " +
-    buildAnalyticalFallback(input, context) +
-    " Si vous voulez, je peux soit répondre de façon générale, soit raccrocher le sujet à un achat concret."
+    "Je peux répondre, même si la demande est encore large. " +
+    `Si vous parlez de “${trimmed}”, dites-moi simplement le produit concerné, votre contrainte principale et ce que vous voulez obtenir : une explication, une recommandation, une comparaison ou un cadrage du besoin.`
   );
 }
 
-export function getMimoContextualResponse(input: string, context: MimoContext): string {
+export function getMimoContextualResponse(input: string, context: MimoContext) {
   return getMimoResponse(input, context);
 }

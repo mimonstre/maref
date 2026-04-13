@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthRequiredPage from "@/components/auth/AuthRequiredPage";
 import { useAuth } from "@/components/auth/AuthProvider";
+import AppBreadcrumbs from "@/components/shared/AppBreadcrumbs";
 import { ScoreCircle, Toast } from "@/components/shared/Score";
 import { CATEGORIES, getCategoryIcon } from "@/lib/categories";
+import { emitQuestUnlocked } from "@/lib/core/questNotifications";
 import { analyzeProject } from "@/lib/projects/service";
 import { useTimedMessage } from "@/lib/hooks/useTimedMessage";
 import {
@@ -26,7 +28,7 @@ export default function ProjetsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState("");
-  const [formCategory, setFormCategory] = useState("Gros electromenager");
+  const [formCategory, setFormCategory] = useState("Gros électroménager");
   const [formBudget, setFormBudget] = useState("");
   const [formObjective, setFormObjective] = useState("");
   const [saving, setSaving] = useState(false);
@@ -75,11 +77,15 @@ export default function ProjetsPage() {
     });
 
     if (success) {
+      const nextProjectCount = projects.length + 1;
       setFormName("");
       setFormBudget("");
       setFormObjective("");
       setShowForm(false);
       showMessage("Projet créé");
+      if (nextProjectCount === 1 || nextProjectCount === 3) {
+        emitQuestUnlocked("Quête réussie : projet créé.");
+      }
       await loadProjects();
     }
 
@@ -114,14 +120,15 @@ export default function ProjetsPage() {
   return (
     <div className="space-y-5">
       <Toast message={message} />
+      <AppBreadcrumbs items={[{ label: "Projets", current: true }]} />
 
       <div className="rounded-2xl bg-gradient-to-br from-blue-950 to-slate-900 p-5 text-white shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold">Vos projets</h2>
             <p className="mt-1 text-sm text-blue-200">
-              {projects.length} projet{projects.length > 1 ? "s" : ""} dont {actionableProjects} en analyse et {matureProjects} prêt
-              {matureProjects > 1 ? "s" : ""} à comparer.
+              {projects.length} projet{projects.length > 1 ? "s" : ""} dont {actionableProjects} en analyse et{" "}
+              {matureProjects} prêt{matureProjects > 1 ? "s" : ""} à comparer.
             </p>
           </div>
           <button
@@ -175,7 +182,7 @@ export default function ProjetsPage() {
             <label className="mb-1 block text-xs font-semibold text-gray-500">Budget cible</label>
             <input
               className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-blue-950"
-              placeholder="Ex : 2 000 EUR"
+              placeholder="Ex : 2 000 €"
               value={formBudget}
               onChange={(event) => setFormBudget(event.target.value)}
             />
@@ -199,13 +206,6 @@ export default function ProjetsPage() {
         </div>
       )}
 
-      <div className="relative rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-4 shadow-sm">
-        <span className="absolute -top-2.5 left-4 rounded-md bg-blue-950 px-2.5 py-0.5 text-[0.7rem] font-bold text-white shadow-sm">Mimo</span>
-        <p className="mt-2 text-sm text-gray-800">
-          Un projet devient vraiment utile quand l&apos;objectif est clair, le budget cohérent et les offres assez solides pour produire un arbitrage crédible.
-        </p>
-      </div>
-
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map((item) => (
@@ -220,7 +220,9 @@ export default function ProjetsPage() {
         <div className="py-16 text-center">
           <p className="mb-3 text-3xl">📁</p>
           <h3 className="mb-1 font-bold text-gray-600">Aucun projet</h3>
-          <p className="mb-4 text-sm text-gray-400">Créez votre premier projet pour transformer l&apos;exploration en vraie décision.</p>
+          <p className="mb-4 text-sm text-gray-400">
+            Créez votre premier projet pour transformer l&apos;exploration en vraie décision.
+          </p>
           <button
             onClick={() => setShowForm(true)}
             className="rounded-lg bg-blue-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-950"
@@ -302,7 +304,7 @@ export default function ProjetsPage() {
                       <p className="text-[0.6rem] text-gray-500">Score projet</p>
                     </div>
                     <div className="rounded-lg bg-gray-50 p-2 text-center">
-                      <p className="text-sm font-bold text-blue-950">{analysis.totalPrice.toLocaleString("fr-FR")} EUR</p>
+                      <p className="text-sm font-bold text-blue-950">{analysis.totalPrice.toLocaleString("fr-FR")} €</p>
                       <p className="text-[0.6rem] text-gray-500">Total</p>
                     </div>
                   </div>
@@ -323,17 +325,14 @@ export default function ProjetsPage() {
                     </div>
                     {analysis.rankedOffers.slice(0, 3).map((offer) => (
                       <div key={offer.id} className="flex items-center justify-between border-b border-gray-50 py-2 last:border-0">
-                        <div
-                          className="flex cursor-pointer items-center gap-2"
-                          onClick={() => router.push("/explorer/" + offer.id)}
-                        >
+                        <div className="flex cursor-pointer items-center gap-2" onClick={() => router.push("/explorer/" + offer.id)}>
                           <span className="text-sm">{getCategoryIcon(offer.category)}</span>
                           <div>
                             <p className="text-sm font-medium transition-colors hover:text-blue-950">
                               {offer.brand} {offer.product}
                             </p>
                             <p className="text-xs text-gray-400">
-                              {offer.merchant} - {offer.price.toLocaleString("fr-FR")} EUR
+                              {offer.merchant} - {offer.price.toLocaleString("fr-FR")} €
                             </p>
                           </div>
                         </div>

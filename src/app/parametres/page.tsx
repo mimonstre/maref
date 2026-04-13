@@ -14,7 +14,7 @@ export default function ParametresPage() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">Parametres</h2>
+        <h2 className="text-xl font-bold">Paramètres</h2>
         <LoadingSkeleton count={3} />
       </div>
     );
@@ -23,13 +23,13 @@ export default function ParametresPage() {
   if (!user) {
     return (
       <div className="space-y-5">
-        <h2 className="text-xl font-bold">Parametres</h2>
+        <h2 className="text-xl font-bold">Paramètres</h2>
         <EmptyState
           icon={<SlidersHorizontal className="h-8 w-8 text-gray-400" />}
-          title="Connectez-vous pour gerer votre compte"
-          description="Les reglages MAREF sont relies a votre session. Sans compte connecte, rien n est affiche artificiellement."
+          title="Connectez-vous pour gérer votre compte"
+          description="Les réglages MAREF sont liés à votre session. Sans compte connecté, rien n’est affiché artificiellement."
           action={() => router.push("/login")}
-          actionLabel="Aller a la connexion"
+          actionLabel="Aller à la connexion"
         />
       </div>
     );
@@ -44,9 +44,9 @@ export default function ParametresPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold">Parametres</h2>
+        <h2 className="text-xl font-bold">Paramètres</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Cette page n affiche que des informations et actions reelles disponibles aujourd hui.
+          Cette page n’affiche que des informations et actions réellement disponibles aujourd’hui.
         </p>
       </div>
 
@@ -62,7 +62,7 @@ export default function ParametresPage() {
         </div>
 
         <div className="flex items-center justify-between border-b border-gray-100 py-2.5">
-          <span className="text-sm text-gray-600">Nom affiche</span>
+          <span className="text-sm text-gray-600">Nom affiché</span>
           <span className="text-sm font-medium">{name}</span>
         </div>
         <div className="flex items-center justify-between border-b border-gray-100 py-2.5">
@@ -70,7 +70,7 @@ export default function ParametresPage() {
           <span className="text-sm font-medium">{email}</span>
         </div>
         <div className="flex items-center justify-between py-2.5">
-          <span className="text-sm text-gray-600">Compte cree</span>
+          <span className="text-sm text-gray-600">Compte créé</span>
           <span className="text-sm font-medium">{memberSince}</span>
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function ParametresPage() {
               }}
               className="flex w-full items-center justify-between rounded-xl border border-red-200 px-3 py-3 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
             >
-              <span>Se deconnecter</span>
+              <span>Se déconnecter</span>
               <LogOut className="h-4 w-4" />
             </button>
           </div>
@@ -105,26 +105,26 @@ export default function ParametresPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <LockKeyhole className="h-4 w-4 text-blue-700" />
-            <h3 className="font-bold">Confidentialite actuelle</h3>
+            <h3 className="font-bold">Confidentialité actuelle</h3>
           </div>
           <p className="text-sm text-gray-600">
-            MAREF utilise votre session Supabase pour lier vos projets, favoris, comparaisons et progression guide a
+            MAREF utilise votre session Supabase pour relier vos projets, favoris, comparaisons et progression guide à
             votre compte.
           </p>
           <p className="mt-2 text-sm text-gray-600">
-            Il n y a pas encore de profil public complet ni de panneau avance de permissions expose dans l interface.
+            Il n’y a pas encore de profil public complet ni de panneau avancé de permissions exposé dans l’interface.
           </p>
         </div>
       </div>
 
       <IncompleteDataWarning
-        title="Reglages encore limites"
-        description="Les themes, notifications fines et preferences avancees ne sont pas encore exposes de facon fiable. Ils ne sont donc plus affiches comme faux interrupteurs."
+        title="Réglages encore limités"
+        description="Les thèmes, notifications fines et préférences avancées ne sont pas encore exposés de façon fiable. Ils ne sont donc plus affichés comme faux interrupteurs."
       />
 
       <NoDataBlock
-        title="Notifications avancees non configurables pour le moment"
-        description="Vous pouvez consulter vos notifications depuis la page dediee, mais il n existe pas encore de panneau de reglage detaille branche a une logique persistante."
+        title="Notifications avancées non configurables pour le moment"
+        description="Vous pouvez consulter vos notifications depuis la page dédiée, mais il n’existe pas encore de panneau de réglage détaillé branché à une logique persistante."
       />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">

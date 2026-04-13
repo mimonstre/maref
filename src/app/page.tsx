@@ -48,7 +48,26 @@ export default function HomePage() {
       setLoading(false);
     }
 
-    void Promise.resolve().then(loadHome);
+    function handleRefresh() {
+      void Promise.resolve().then(loadHome);
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        handleRefresh();
+      }
+    }
+
+    handleRefresh();
+    window.addEventListener("focus", handleRefresh);
+    window.addEventListener("maref-history-updated", handleRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleRefresh);
+      window.removeEventListener("maref-history-updated", handleRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   const categoryCards = useMemo(

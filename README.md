@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MAREF
 
-## Getting Started
+MAREF est une application Next.js orientée décision d’achat.  
+Le produit aide un utilisateur à :
 
-First, run the development server:
+- explorer des produits par famille
+- ouvrir une fiche produit agrégée
+- comparer des offres marchandes
+- structurer sa décision dans un projet
+- s’appuyer sur un score MAREF et sur Mimo pour mieux arbitrer
+
+## Positionnement
+
+MAREF n’est pas un simple comparateur de prix.  
+Le cœur du produit est la boucle suivante :
+
+1. identifier un besoin
+2. explorer des produits comparables
+3. analyser des offres marchandes
+4. regrouper les offres dans un projet
+5. comparer et décider avec plus de contexte
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Supabase
+
+## Architecture
+
+Le dépôt est organisé autour de quatre zones principales :
+
+- [src/app](/C:/Users/PC/Documents/maref/src/app:1) : routes App Router
+- [src/components](/C:/Users/PC/Documents/maref/src/components:1) : shell, composants UI transverses et auth
+- [src/features](/C:/Users/PC/Documents/maref/src/features:1) : logique et composants par domaine métier
+- [src/lib](/C:/Users/PC/Documents/maref/src/lib:1) : noyau métier, services, hooks, score, projets, Mimo
+
+Documentation complémentaire :
+
+- [docs/architecture.md](/C:/Users/PC/Documents/maref/docs/architecture.md:1)
+- [docs/product-model.md](/C:/Users/PC/Documents/maref/docs/product-model.md:1)
+
+## Démarrage local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Vérifications
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npx tsc --noEmit
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variables d’environnement
 
-## Learn More
+Selon les flux activés, le projet peut utiliser :
 
-To learn more about Next.js, take a look at the following resources:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `ANTHROPIC_API_KEY`
+- `BESTBUY_API_KEY`
+- `NEXT_PUBLIC_MAREF_DEMO_CATALOG`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`NEXT_PUBLIC_MAREF_DEMO_CATALOG` doit être activée explicitement pour permettre le mode catalogue démo.  
+En production, l’objectif recommandé est de laisser ce mode désactivé.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## État du modèle métier
 
-## Deploy on Vercel
+Le produit est en transition d’un modèle centré uniquement sur `Offer` vers un domaine plus propre :
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `Product` : fiche agrégée visible dans l’explorer
+- `Offer` : offre marchande analysable et comparable
+- `Merchant` : enseigne ou marchand
+- `PriceSnapshot` : historique de prix persistant
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Cette transition est déjà entamée côté UI et hooks, mais reste à finaliser côté schéma de données.
+
+## Priorités techniques actuelles
+
+- finaliser la séparation `Product` / `Offer`
+- réduire la couche legacy dans `src/lib`
+- fiabiliser la persistence du comparateur côté serveur
+- remplacer les données démo par une vraie pipeline catalogue
+- renforcer l’intégration Mimo avec le contexte compte/projet
+
+## Philosophie produit
+
+MAREF doit rester un produit honnête :
+
+- pas de score sans base exploitable
+- pas d’historique prix sans relevés réels
+- pas de profondeur simulée
+- pas de contenu inventé présenté comme vrai

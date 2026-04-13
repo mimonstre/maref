@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import {
   ASSISTANT_SUGGESTIONS,
@@ -9,99 +9,112 @@ import {
   type MimoContext,
 } from "@/features/assistant/content";
 import { getProjectsWithOffers } from "@/features/projects/api";
-import { getFavorites, getViewHistory } from "@/lib/queries";
-import type { UserDecisionProfile } from "@/lib/core";
 import { getRecentSearchSignals, getUserLocation } from "@/lib/core/userSignals";
+import { appendPersistedMimoExchange, loadPersistedMimoMessages } from "@/lib/services/accountMemory";
+import { getFavorites, getUserProfile, getViewHistory } from "@/lib/queries";
 
 export default function AssistantPage() {
   const { user } = useAuth();
   const userName = user?.user_metadata?.name || "Utilisateur";
-
   const [context, setContext] = useState<MimoContext>({});
   const [contextLoaded, setContextLoaded] = useState(false);
-
-  const buildGreeting = (ctx: MimoContext): string => {
-    if (ctx.hasProjects && ctx.projects && ctx.projects.length > 0) {
-      const count = ctx.projects.length;
-      return (
-        "Bonjour " +
-        userName +
-        ". Tu as " +
-        count +
-        " projet" +
-        (count > 1 ? "s" : "") +
-        " en cours. Je peux t aider a analyser tes offres, comprendre le score, ou te donner une recommandation contextualisee."
-      );
-    }
-    return (
-      "Bonjour " +
-      userName +
-      ". Je suis Mimo, ton assistant decisionnel MAREF. Pose-moi n importe quelle question sur les offres, le score PEFAS, ou tes projets d achat."
-    );
-  };
-
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const dynamicSuggestions = useMemo(() => {
+    const suggestions = [...ASSISTANT_SUGGESTIONS];
+    if (context.projects?.length) suggestions.unshift(`Que penses-tu de mon projet ${context.projects[0].name} ?`);
+    if (context.recentSearches?.length) suggestions.push("Que déduis-tu de mes dernières recherches ?");
+    if (context.recentViews?.length) suggestions.push("Que peux-tu me dire sur mes dernières fiches vues ?");
+    return suggestions.slice(0, 8);
+  }, [context]);
 
   useEffect(() => {
     async function loadContext() {
       try {
-        const [{ projects, projectOffers }, favIds, history] = await Promise.all([
+        const [{ projects, projectOffers }, favoriteIds, history, profile] = await Promise.all([
           getProjectsWithOffers(),
           getFavorites(),
           getViewHistory(),
+          getUserProfile(),
         ]);
 
-        let profile: UserDecisionProfile | undefined;
-        try {
-          const raw = localStorage.getItem("maref_user_profile");
-          if (raw) profile = JSON.parse(raw) as UserDecisionProfile;
-        } catch {}
+        const projectsSummary = projects.map((project) => {
+          const offers = projectOffers[project.id] || [];
+          const validOffers = offers.filter((offer) => offer.score !== null);
+          const avgScore =
+            validOffers.length > 0
+              ? Math.round(validOffers.reduce((sum, offer) => sum + (offer.score ?? 0), 0) / validOffers.length)
+              : 0;
 
-        let totalOffers = 0;
-        const projectsSummary = projects.map((p) => {
-          const offers = projectOffers[p.id] || [];
-          totalOffers += offers.length;
-          const validOffers = offers.filter((o) => o.score !== null);
-
-const avgScore =
-  validOffers.length > 0
-    ? Math.round(
-        validOffers.reduce((acc, o) => acc + (o.score ?? 0), 0) / validOffers.length
-      )
-    : 0;
           return {
-            name: p.name,
+            id: project.id,
+            name: project.name,
             offers: offers.length,
             score: avgScore,
-            category: p.category,
+            category: project.category,
           };
         });
 
-        const recentSearches = getRecentSearchSignals().slice(0, 4).map((item) => item.label);
+        const prioritizedProject = projectsSummary[0];
+        const recentSearches = getRecentSearchSignals().slice(0, 5).map((item) => item.label);
         const location = getUserLocation();
+        const nextActiveProjectId = prioritizedProject?.id || null;
 
-        const ctx: MimoContext = {
-          projects: projectsSummary,
-          favCount: favIds.length,
+        const nextContext: MimoContext = {
+          projects: projectsSummary.map((project) => ({
+            name: project.name,
+            offers: project.offers,
+            score: project.score,
+            category: project.category,
+          })),
+          favCount: favoriteIds.length,
           preferredBudget: profile?.budget,
           preferredPriority: profile?.priority,
+          decisionStyle: profile?.horizon,
+          household: profile?.usage,
+          housingType: profile?.risk,
+          supportStyle: profile?.priority,
           hasProjects: projects.length > 0,
-          totalOffers,
+          totalOffers: projectsSummary.reduce((sum, item) => sum + item.offers, 0),
           recentSearches,
-          recentViews: history.slice(0, 4).map((item) => item.product),
-          location: location ? [location.city, location.postalCode, location.region].filter(Boolean).join(" - ") : undefined,
+          recentViews: history.slice(0, 5).map((item) => item.product),
+          location: location
+            ? [location.city, location.postalCode, location.region].filter(Boolean).join(" • ")
+            : undefined,
         };
 
-        setContext(ctx);
-        setMessages([{ from: "mimo", text: buildGreeting(ctx), source: "local" }]);
+        const persistedMessages = await loadPersistedMimoMessages(nextActiveProjectId);
+        const hydratedMessages: AssistantMessage[] = persistedMessages.map((message) => ({
+          from: message.role === "assistant" ? "mimo" : "user",
+          text: message.text,
+          source: message.role === "assistant" ? message.source || "local" : undefined,
+        }));
+
+        setActiveProjectId(nextActiveProjectId);
+        setContext(nextContext);
+        setMessages(
+          hydratedMessages.length > 0
+            ? hydratedMessages
+            : [
+                {
+                  from: "mimo",
+                  text:
+                    nextContext.projects && nextContext.projects.length > 0
+                      ? `Bonjour ${userName}. Je vois vos projets, vos recherches récentes et votre profil de décision. Dites-moi ce que vous essayez de trancher et je vous aide à poser une réponse utile.`
+                      : `Bonjour ${userName}. Je suis Mimo, l’assistant décisionnel de MAREF. On peut partir d’un besoin, d’un doute, d’une offre, d’une comparaison ou d’une question libre.`,
+                  source: "local",
+                },
+              ],
+        );
       } catch {
         setMessages([
           {
             from: "mimo",
-            text: "Bonjour " + userName + ". Je suis Mimo, ton assistant decisionnel MAREF. Comment puis-je t aider ?",
+            text: `Bonjour ${userName}. Je suis Mimo. Dites-moi ce que vous voulez comprendre, comparer ou cadrer.`,
             source: "local",
           },
         ]);
@@ -110,83 +123,79 @@ const avgScore =
       }
     }
 
-    loadContext();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void loadContext();
+  }, [userName]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
   async function sendMessage(text?: string) {
-    const msg = text || input.trim();
-    if (!msg) return;
+    const nextText = text || input.trim();
+    if (!nextText) return;
 
-    setMessages((prev) => [...prev, { from: "user", text: msg }]);
+    const history = messages.map((message) => ({ from: message.from, text: message.text }));
+    setMessages((previous) => [...previous, { from: "user", text: nextText }]);
     setInput("");
     setTyping(true);
 
-    let responseText: string;
+    let responseText = "";
     let source: "ai" | "local" = "local";
 
-    // Try Claude API with 5 second timeout
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = window.setTimeout(() => controller.abort(), 12000);
 
-      const history = messages.map((m) => ({ from: m.from, text: m.text }));
-
-      const res = await fetch("/api/mimo", {
+      const response = await fetch("/api/mimo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, context, history }),
+        body: JSON.stringify({ message: nextText, context, history, projectId: activeProjectId }),
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const data = await res.json() as { text: string };
-        responseText = data.text;
-        source = "ai";
-      } else {
+      if (!response.ok) {
         throw new Error("API error");
       }
+
+      const data = (await response.json()) as { text: string };
+      responseText = data.text;
+      source = "ai";
     } catch {
-      // Fall back to local response
-      responseText = getMimoResponse(msg, context);
+      responseText = getMimoResponse(nextText, context);
       source = "local";
     }
 
-    setMessages((prev) => [...prev, { from: "mimo", text: responseText, source }]);
+    setMessages((previous) => [...previous, { from: "mimo", text: responseText, source }]);
     setTyping(false);
+    void appendPersistedMimoExchange({
+      projectId: activeProjectId,
+      userText: nextText,
+      assistantText: responseText,
+      source,
+    });
   }
-
-  // Contextual suggestions based on loaded context
-  const dynamicSuggestions: string[] = [];
-  if (context.projects && context.projects.length > 0) {
-    dynamicSuggestions.push("Analyse mon projet " + context.projects[0].name);
-  }
-  if (context.favCount && context.favCount > 0) {
-    dynamicSuggestions.push("Mes offres favorites");
-  }
-  if (context.recentSearches && context.recentSearches.length > 0) {
-    dynamicSuggestions.push("Que penses-tu de mes dernieres recherches ?");
-  }
-  dynamicSuggestions.push("Quelle est la meilleure offre pour moi ?");
-
-  const allSuggestions = [...ASSISTANT_SUGGESTIONS, ...dynamicSuggestions];
 
   return (
     <div className="flex flex-col" style={{ height: "calc(100vh - 140px)" }}>
-      <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+      <div className="premium-surface mb-3 rounded-[28px] p-4">
+        <p className="text-[0.72rem] font-bold uppercase tracking-[0.22em] text-blue-950">Assistant Mimo</p>
+        <h1 className="mt-2 text-2xl font-black text-slate-950">Une IA reliée à votre contexte MAREF</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Mimo lit vos projets, vos dernières recherches, vos consultations récentes et vos préférences pour répondre
+          de manière plus juste.
+        </p>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto pb-4">
         {!contextLoaded && (
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-3">
               <div className="flex gap-1">
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "0ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "150ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "300ms" }}></span>
               </div>
             </div>
           </div>
@@ -196,21 +205,23 @@ const avgScore =
           <div key={index} className={"flex " + (message.from === "user" ? "justify-end" : "justify-start")}>
             <div
               className={
-                "max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-line " +
+                "max-w-[85%] whitespace-pre-line rounded-2xl px-3.5 py-2.5 text-sm " +
                 (message.from === "user"
-                  ? "bg-blue-950 text-white rounded-br-md"
-                  : "rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-gray-800")
+                  ? "rounded-br-md bg-blue-950 text-white"
+                  : "rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 text-slate-800")
               }
             >
               {message.from === "mimo" && (
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="mb-1 flex items-center gap-1.5">
                   <span className="text-[0.6rem] font-bold text-blue-950">Mimo</span>
-                  {message.source === "ai" && (
-                    <span className="text-[0.55rem] px-1 py-0.5 rounded bg-blue-950 text-white font-semibold leading-none">IA</span>
-                  )}
-                  {message.source === "local" && (
-                    <span className="text-[0.55rem] px-1 py-0.5 rounded bg-gray-200 text-gray-500 font-semibold leading-none">Local</span>
-                  )}
+                  <span
+                    className={
+                      "rounded px-1 py-0.5 text-[0.55rem] font-semibold leading-none " +
+                      (message.source === "ai" ? "bg-blue-950 text-white" : "bg-slate-200 text-slate-600")
+                    }
+                  >
+                    {message.source === "ai" ? "IA" : "Local"}
+                  </span>
                 </div>
               )}
               {message.text}
@@ -222,9 +233,9 @@ const avgScore =
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-bl-md border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 px-4 py-3">
               <div className="flex gap-1">
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="h-2 w-2 rounded-full bg-blue-900 animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "0ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "150ms" }}></span>
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-900" style={{ animationDelay: "300ms" }}></span>
               </div>
             </div>
           </div>
@@ -233,12 +244,12 @@ const avgScore =
       </div>
 
       {messages.length <= 2 && contextLoaded && (
-        <div className="flex gap-2 flex-wrap pb-3">
-          {allSuggestions.map((suggestion) => (
+        <div className="flex flex-wrap gap-2 pb-3">
+          {dynamicSuggestions.map((suggestion) => (
             <button
               key={suggestion}
-              onClick={() => sendMessage(suggestion)}
-              className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-600 transition-colors hover:border-slate-300 hover:text-blue-950"
+              onClick={() => void sendMessage(suggestion)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition-colors hover:border-slate-300 hover:text-blue-950"
             >
               {suggestion}
             </button>
@@ -246,22 +257,22 @@ const avgScore =
         </div>
       )}
 
-      <div className="flex gap-2 pt-3 border-t border-gray-200">
+      <div className="flex gap-2 border-t border-slate-200 pt-3">
         <input
-          className="flex-1 rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none transition-all focus:border-blue-950 focus:ring-2 focus:ring-slate-200"
-          placeholder="Posez votre question a Mimo..."
+          className="flex-1 rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition-all focus:border-blue-950 focus:ring-2 focus:ring-slate-200"
+          placeholder="Posez votre question à Mimo..."
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") sendMessage();
+            if (event.key === "Enter") void sendMessage();
           }}
         />
         <button
-          onClick={() => sendMessage()}
+          onClick={() => void sendMessage()}
           disabled={!input.trim() || typing}
           className="rounded-xl bg-blue-950 px-4 py-2.5 text-white transition-colors hover:bg-slate-950 disabled:opacity-50"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>

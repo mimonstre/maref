@@ -30,48 +30,48 @@ export type SeasonalBadge = ProfileBadge & {
 };
 
 const PROFILE_LEVELS = [
-  { level: 1, name: "Niveau 1", xpNeeded: 0 },
-  { level: 2, name: "Niveau 2", xpNeeded: 40 },
-  { level: 3, name: "Niveau 3", xpNeeded: 90 },
-  { level: 4, name: "Niveau 4", xpNeeded: 160 },
-  { level: 5, name: "Niveau 5", xpNeeded: 240 },
+  { level: 1, name: "Éclaireur", xpNeeded: 0 },
+  { level: 2, name: "Analyste", xpNeeded: 40 },
+  { level: 3, name: "Décideur", xpNeeded: 90 },
+  { level: 4, name: "Arbitre", xpNeeded: 160 },
+  { level: 5, name: "Référence", xpNeeded: 240 },
 ];
 
 const PROFILE_XP_RULES: Array<Omit<ProfileTaskProgress, "current" | "completed">> = [
   { id: "favorites-1", label: "Ajouter 1 favori", category: "Suivi", xp: 10, target: 1 },
   { id: "favorites-5", label: "Ajouter 5 favoris", category: "Suivi", xp: 20, target: 5 },
-  { id: "projects-1", label: "Creer 1 projet", category: "Projets", xp: 20, target: 1 },
-  { id: "projects-3", label: "Creer 3 projets", category: "Projets", xp: 30, target: 3 },
-  { id: "comparisons-1", label: "Comparer 1 fois", category: "Analyse", xp: 15, target: 1 },
-  { id: "comparisons-5", label: "Comparer 5 fois", category: "Analyse", xp: 30, target: 5 },
-  { id: "guide-1", label: "Completer 1 module du guide", category: "Guide", xp: 15, target: 1 },
+  { id: "projects-1", label: "Créer 1 projet", category: "Projets", xp: 20, target: 1 },
+  { id: "projects-3", label: "Créer 3 projets", category: "Projets", xp: 30, target: 3 },
+  { id: "comparisons-1", label: "Lancer 1 comparaison", category: "Analyse", xp: 15, target: 1 },
+  { id: "comparisons-5", label: "Lancer 5 comparaisons", category: "Analyse", xp: 30, target: 5 },
+  { id: "guide-1", label: "Valider 1 module du guide", category: "Guide", xp: 15, target: 1 },
   { id: "forum-topic", label: "Publier 1 topic", category: "Forum", xp: 20, target: 1 },
-  { id: "forum-reply", label: "Publier 3 reponses", category: "Forum", xp: 20, target: 3 },
+  { id: "forum-reply", label: "Publier 3 réponses", category: "Forum", xp: 20, target: 3 },
 ];
 
 const PROFILE_BADGE_RULES: Array<Omit<ProfileBadge, "completed"> & { isCompleted: (snapshot: ProfileActivitySnapshot) => boolean }> = [
   {
     id: "badge-first-project",
     name: "Premier projet",
-    description: "Obtenu lorsque vous creez votre premier projet.",
+    description: "Attribué dès la création du premier projet.",
     isCompleted: (snapshot) => snapshot.projects >= 1,
   },
   {
     id: "badge-compare-5",
-    name: "Comparateur",
-    description: "Obtenu apres 5 comparaisons reelles.",
+    name: "Comparateur actif",
+    description: "Attribué après 5 comparaisons réelles.",
     isCompleted: (snapshot) => snapshot.comparisons >= 5,
   },
   {
     id: "badge-guide",
-    name: "Guide actif",
-    description: "Obtenu apres au moins 2 modules completes.",
+    name: "Montée en compétence",
+    description: "Attribué après 2 modules du guide validés.",
     isCompleted: (snapshot) => snapshot.guideModulesCompleted >= 2,
   },
   {
     id: "badge-community",
-    name: "Contributeur forum",
-    description: "Obtenu apres 1 topic et 3 reponses.",
+    name: "Contributeur",
+    description: "Attribué après 1 topic et 3 réponses utiles.",
     isCompleted: (snapshot) => snapshot.topics >= 1 && snapshot.replies >= 3,
   },
 ];
@@ -83,14 +83,14 @@ const SEASONAL_BADGES: Array<{
   periodLabel: string;
   months: number[];
 }> = [
-  { id: "season-winter-sales", name: "Soldes d hiver", description: "Badge disponible pendant la periode des soldes d hiver.", periodLabel: "Janvier - fevrier", months: [0, 1] },
-  { id: "season-valentine", name: "Saint-Valentin", description: "Badge saisonnier autour de la periode de la Saint-Valentin.", periodLabel: "Fevrier", months: [1] },
-  { id: "season-easter", name: "Paques", description: "Badge saisonnier associe aux selections de printemps.", periodLabel: "Mars - avril", months: [2, 3] },
-  { id: "season-summer-sales", name: "Soldes d ete", description: "Badge disponible pendant la periode des soldes d ete.", periodLabel: "Juin - juillet", months: [5, 6] },
-  { id: "season-french-days", name: "French Days", description: "Badge lie aux periodes French Days quand elles sont actives.", periodLabel: "Avril / septembre", months: [3, 8] },
-  { id: "season-halloween", name: "Halloween", description: "Badge saisonnier d automne.", periodLabel: "Octobre", months: [9] },
-  { id: "season-black-friday", name: "Black Friday", description: "Badge saisonnier pour les comparatifs menes pendant Black Friday.", periodLabel: "Novembre", months: [10] },
-  { id: "season-christmas", name: "Noel", description: "Badge saisonnier pour les parcours d achat de fin d annee.", periodLabel: "Decembre", months: [11] },
+  { id: "season-winter-sales", name: "Soldes d’hiver", description: "Période idéale pour comparer au lieu de subir l’urgence promo.", periodLabel: "Janvier • Février", months: [0, 1] },
+  { id: "season-valentine", name: "Saint-Valentin", description: "Saison courte pour les achats cadeaux où la rapidité ne doit pas écraser la qualité.", periodLabel: "Février", months: [1] },
+  { id: "season-easter", name: "Pâques", description: "Repère printanier pour les achats maison et renouvellements d’équipement.", periodLabel: "Mars • Avril", months: [2, 3] },
+  { id: "season-summer-sales", name: "Soldes d’été", description: "Moment propice pour arbitrer des références très visibles mais pas toujours bien documentées.", periodLabel: "Juin • Juillet", months: [5, 6] },
+  { id: "season-french-days", name: "French Days", description: "Saison de forte intensité promotionnelle où comparer proprement devient encore plus utile.", periodLabel: "Avril • Septembre", months: [3, 8] },
+  { id: "season-halloween", name: "Halloween", description: "Repère automnal pour les sélections gaming, TV et maison.", periodLabel: "Octobre", months: [9] },
+  { id: "season-black-friday", name: "Black Friday", description: "Saison la plus critique pour distinguer vraie opportunité et simple pression commerciale.", periodLabel: "Novembre", months: [10] },
+  { id: "season-christmas", name: "Noël", description: "Période cadeau et équipements foyer où les arbitrages se multiplient.", periodLabel: "Décembre", months: [11] },
 ];
 
 function readCurrentValue(snapshot: ProfileActivitySnapshot, taskId: string) {
@@ -150,9 +150,8 @@ export function computeProfileProgress(snapshot: ProfileActivitySnapshot) {
 }
 
 export function getProfileImpactText(priority: string) {
-  if (priority === "Fiabilite") return "Votre priorite Fiabilite renforce Assurance et Stabilite dans le calcul contextualise.";
-  if (priority === "Prix") return "Votre priorite Prix renforce l axe Economie dans le calcul contextualise.";
-  if (priority === "Simplicite") return "Votre priorite Simplicite renforce Fluidite dans le calcul contextualise.";
-  if (priority === "Durabilite") return "Votre priorite Durabilite renforce surtout Stabilite et le regard long terme sur l achat.";
-  return "Vos preferences influencent le classement des offres uniquement a partir de donnees reelles disponibles.";
+  if (priority === "Prix avant tout") return "Votre profil privilégie l’équilibre budgétaire. MAREF mettra davantage l’accent sur l’économie et le coût d’erreur.";
+  if (priority === "Qualité avant tout") return "Votre profil privilégie la qualité perçue. MAREF renforcera surtout la pertinence, la stabilité et le cadre marchand.";
+  if (priority === "Durabilité avant tout") return "Votre profil privilégie la durée de vie et la cohérence long terme. La stabilité devient un critère plus structurant.";
+  return "Votre profil cherche un équilibre général. MAREF garde une lecture plus neutre entre coût, pertinence, fluidité, assurance et stabilité.";
 }

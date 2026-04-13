@@ -43,7 +43,7 @@ export const accountNavigation: NavItem[] = [
   { href: "/projets", label: "Projets", icon: FolderKanban },
   { href: "/assistant", label: "Assistant Mimo", icon: Sparkles },
   { href: "/forum", label: "Forum", icon: MessageSquare },
-  { href: "/parametres", label: "Parametres", icon: Settings },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
 
 export const mobileMoreNavigation: NavItem[] = [
@@ -55,5 +55,5 @@ export const mobileMoreNavigation: NavItem[] = [
   { href: "/historique", label: "Historique", icon: History },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/pro", label: "MAREF Pro", icon: PanelTop },
-  { href: "/parametres", label: "Parametres", icon: Settings },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
 ];

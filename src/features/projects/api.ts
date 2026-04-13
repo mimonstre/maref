@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
-import { getOfferDataState, type ProjectDecisionContext } from "@/lib/core";
+import type { ProjectDecisionContext } from "@/lib/core";
 import type { Offer } from "@/lib/data";
+import { mapOfferRow, type OfferRow } from "@/lib/services/offerMapper";
 
 export type Project = {
   id: string;
@@ -19,92 +20,12 @@ type ProjectOfferLink = {
   offer_id: string;
 };
 
-type OfferRow = {
-  id: string;
-  product: string;
-  brand: string;
-  model: string;
-  category: string;
-  subcategory: string;
-  merchant: string;
-  price: number;
-  barred_price: number | null;
-  availability: string;
-  delivery: string;
-  warranty: string;
-  score: number;
-  status: string;
-  status_color: string;
-  confidence: string;
-  freshness: string;
-  source_url?: string | null;
-  last_updated?: string | null;
-  reliability_score?: number | null;
-  pefas_p: number;
-  pefas_e: number;
-  pefas_f: number;
-  pefas_a: number;
-  pefas_s: number;
-  mimo_short: string;
-  reasons: string[];
-  vigilances: string[];
-  specs?: Record<string, string>;
-};
-
 async function getCurrentUserId() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   return user?.id ?? null;
-}
-
-function normalizeAvailability(value: string | null | undefined) {
-  if (!value) return "Disponibilite a confirmer";
-  if (value.toLowerCase() === "en stock") return "Disponible";
-  return value;
-}
-
-function mapOffer(row: OfferRow): Offer {
-  const offer: Offer = {
-    id: row.id,
-    product: row.product,
-    brand: row.brand,
-    model: row.model,
-    category: row.category,
-    subcategory: row.subcategory,
-    merchant: row.merchant,
-    price: row.price,
-    barredPrice: row.barred_price,
-    availability: normalizeAvailability(row.availability),
-    delivery: row.delivery,
-    warranty: row.warranty,
-    score: typeof row.score === "number" ? row.score : null,
-    status: row.status || null,
-    statusColor: row.status_color || null,
-    confidence: row.confidence || null,
-    freshness: row.freshness || null,
-    sourceUrl: row.source_url || null,
-    lastUpdated: row.last_updated || null,
-    reliabilityScore: typeof row.reliability_score === "number" ? row.reliability_score : null,
-    dataState: "unknown",
-    pefas: {
-      P: typeof row.pefas_p === "number" ? row.pefas_p : null,
-      E: typeof row.pefas_e === "number" ? row.pefas_e : null,
-      F: typeof row.pefas_f === "number" ? row.pefas_f : null,
-      A: typeof row.pefas_a === "number" ? row.pefas_a : null,
-      S: typeof row.pefas_s === "number" ? row.pefas_s : null,
-    },
-    mimoShort: row.mimo_short || null,
-    reasons: row.reasons || [],
-    vigilances: row.vigilances || [],
-    specs: row.specs || {},
-  };
-
-  return {
-    ...offer,
-    dataState: getOfferDataState(offer),
-  };
 }
 
 export async function getProjects(): Promise<Project[]> {
@@ -150,7 +71,7 @@ export async function getProjectsWithOffers(): Promise<{
     .select("*")
     .in("id", offerIds);
 
-  const offersMap = Object.fromEntries(((offersData || []) as OfferRow[]).map((offer) => [offer.id, mapOffer(offer)]));
+  const offersMap = Object.fromEntries(((offersData || []) as OfferRow[]).map((offer) => [offer.id, mapOfferRow(offer)]));
 
   for (const link of links) {
     const offer = offersMap[link.offer_id];

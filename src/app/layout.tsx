@@ -3,10 +3,11 @@ import "./globals.css";
 import TopBar from "@/components/layout/TopBar";
 import BottomNav from "@/components/layout/BottomNav";
 import AuthProvider from "@/components/auth/AuthProvider";
+import GlobalQuestToast from "@/components/shared/GlobalQuestToast";
 
 export const metadata: Metadata = {
-  title: "MAREF - Intelligence Decisionnelle",
-  description: "Moteur d intelligence decisionnelle applique a l achat",
+  title: "MAREF - L'intelligence de vos choix",
+  description: "MAREF aide à comprendre, comparer et décider plus clairement avant un achat.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,8 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="app-shell text-gray-900 antialiased">
         <AuthProvider>
           <TopBar />
-          <main className="page-wrap min-h-screen pb-24 pt-16 md:pb-8">
-            <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+          <GlobalQuestToast />
+          <main className="page-wrap min-h-screen pb-24 pt-18 md:pb-8">
+            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
               {children}
             </div>
           </main>

@@ -1,8 +1,11 @@
 "use client";
 
 import type { Offer } from "@/lib/data";
+import { emitQuestUnlocked } from "@/lib/core/questNotifications";
+import { incrementCompareCount } from "@/lib/services/offers";
+import { loadPersistedCompareState, savePersistedCompareState } from "@/lib/services/accountMemory";
 import { getOfferCompareFamily } from "./families";
-import type { CompareGroup } from "./types";
+import type { CompareGroup, CompareOfferSnapshot, PersistedCompareState } from "./types";
 
 const STORAGE_KEY = "maref.compare.groups";
 const SNAPSHOT_STORAGE_KEY = "maref.compare.offer-snapshots";
@@ -10,6 +13,23 @@ const MAX_OFFERS_PER_GROUP = 3;
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function normalizeGroups(groups: CompareGroup[]) {
+  return groups.map((group) => ({
+    ...group,
+    offerIds: Array.from(new Set((group.offerIds || []).map((id) => String(id)))).slice(0, MAX_OFFERS_PER_GROUP),
+    updatedAt: group.updatedAt || new Date().toISOString(),
+  }));
+}
+
+function pruneGroupsAgainstSnapshots(groups: CompareGroup[], snapshots: Record<string, CompareOfferSnapshot>) {
+  return normalizeGroups(groups)
+    .map((group) => ({
+      ...group,
+      offerIds: group.offerIds.filter((id) => Boolean(snapshots[String(id)])),
+    }))
+    .filter((group) => group.offerIds.length > 0);
 }
 
 export function loadCompareGroups(): CompareGroup[] {
@@ -20,11 +40,7 @@ export function loadCompareGroups(): CompareGroup[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as CompareGroup[];
     if (!Array.isArray(parsed)) return [];
-
-    return parsed.map((group) => ({
-      ...group,
-      offerIds: Array.from(new Set((group.offerIds || []).map((id) => String(id)))),
-    }));
+    return normalizeGroups(parsed);
   } catch {
     return [];
   }
@@ -32,40 +48,8 @@ export function loadCompareGroups(): CompareGroup[] {
 
 export function saveCompareGroups(groups: CompareGroup[]) {
   if (!canUseStorage()) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeGroups(groups)));
 }
-
-type CompareOfferSnapshot = Pick<
-  Offer,
-  | "id"
-  | "product"
-  | "brand"
-  | "model"
-  | "category"
-  | "subcategory"
-  | "merchant"
-  | "price"
-  | "barredPrice"
-  | "availability"
-  | "delivery"
-  | "warranty"
-  | "score"
-  | "status"
-  | "statusColor"
-  | "confidence"
-  | "freshness"
-  | "imageUrl"
-  | "sourceUrl"
-  | "lastUpdated"
-  | "reliabilityScore"
-  | "priceHistory"
-  | "dataState"
-  | "pefas"
-  | "mimoShort"
-  | "reasons"
-  | "vigilances"
-  | "specs"
->;
 
 function loadSnapshotMap(): Record<string, CompareOfferSnapshot> {
   if (!canUseStorage()) return {};
@@ -85,9 +69,8 @@ function saveSnapshotMap(snapshotMap: Record<string, CompareOfferSnapshot>) {
   window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshotMap));
 }
 
-function persistOfferSnapshot(offer: Offer) {
-  const snapshotMap = loadSnapshotMap();
-  snapshotMap[String(offer.id)] = {
+function toSnapshot(offer: Offer): CompareOfferSnapshot {
+  return {
     id: offer.id,
     product: offer.product,
     brand: offer.brand,
@@ -117,35 +100,112 @@ function persistOfferSnapshot(offer: Offer) {
     vigilances: offer.vigilances,
     specs: offer.specs,
   };
+}
+
+function persistOfferSnapshot(offer: Offer) {
+  const snapshotMap = loadSnapshotMap();
+  snapshotMap[String(offer.id)] = toSnapshot(offer);
   saveSnapshotMap(snapshotMap);
+}
+
+function buildPersistedState(groups: CompareGroup[]): PersistedCompareState {
+  return {
+    groups: normalizeGroups(groups),
+    snapshots: loadSnapshotMap(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function mergeGroupLists(accountGroups: CompareGroup[], localGroups: CompareGroup[]) {
+  const merged = [...normalizeGroups(accountGroups)];
+
+  normalizeGroups(localGroups).forEach((group) => {
+    const existingIndex = merged.findIndex((item) => item.key === group.key);
+    if (existingIndex === -1) {
+      merged.push(group);
+      return;
+    }
+
+    merged[existingIndex] = {
+      ...merged[existingIndex],
+      offerIds: Array.from(new Set([...merged[existingIndex].offerIds, ...group.offerIds])).slice(0, MAX_OFFERS_PER_GROUP),
+      updatedAt: merged[existingIndex].updatedAt > group.updatedAt ? merged[existingIndex].updatedAt : group.updatedAt,
+    };
+  });
+
+  return merged.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+async function syncPersistedState(groups: CompareGroup[]) {
+  const state = buildPersistedState(groups);
+  await savePersistedCompareState(state);
+  return state.groups;
+}
+
+async function registerComparisonIfReady(previousCount: number, nextCount: number) {
+  if (previousCount < 2 && nextCount >= 2) {
+    await incrementCompareCount();
+    emitQuestUnlocked("Quête réussie : comparaison lancée.");
+  }
+}
+
+export async function hydrateCompareState() {
+  const localGroups = loadCompareGroups();
+  const localSnapshots = loadSnapshotMap();
+  const persistedState = await loadPersistedCompareState();
+
+  if (!persistedState) {
+    const prunedLocalGroups = pruneGroupsAgainstSnapshots(localGroups, localSnapshots);
+    saveCompareGroups(prunedLocalGroups);
+    return {
+      groups: prunedLocalGroups,
+      snapshots: localSnapshots,
+    };
+  }
+
+  const mergedSnapshots = { ...persistedState.snapshots, ...localSnapshots };
+  const mergedGroups = pruneGroupsAgainstSnapshots(mergeGroupLists(persistedState.groups, localGroups), mergedSnapshots);
+
+  saveCompareGroups(mergedGroups);
+  saveSnapshotMap(mergedSnapshots);
+
+  await savePersistedCompareState({
+    groups: mergedGroups,
+    snapshots: mergedSnapshots,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return {
+    groups: mergedGroups,
+    snapshots: mergedSnapshots,
+  };
 }
 
 export function loadCompareOfferSnapshots(): Offer[] {
   return Object.values(loadSnapshotMap()) as Offer[];
 }
 
-export function addOfferToCompareGroups(offer: Offer) {
+export async function addOfferToCompareGroups(offer: Offer) {
   const offerId = String(offer.id);
   persistOfferSnapshot(offer);
-  const groups = loadCompareGroups().map((group) => ({
-    ...group,
-    offerIds: Array.from(new Set(group.offerIds.map((id) => String(id)))),
-  }));
+  const hydrated = await hydrateCompareState();
+  const groups = normalizeGroups(hydrated.groups);
   const family = getOfferCompareFamily(offer);
   const existingGroup = groups.find((group) => group.key === family.key);
 
   if (!existingGroup) {
     const nextGroups = [{ ...family, offerIds: [offerId], updatedAt: new Date().toISOString() }, ...groups];
     saveCompareGroups(nextGroups);
-    return { status: "added" as const, family };
+    await syncPersistedState(nextGroups);
+    return { status: "added" as const, family, groups: nextGroups };
   }
 
   if (existingGroup.offerIds.includes(offerId)) {
-    return { status: "exists" as const, family };
+    return { status: "exists" as const, family, groups };
   }
 
   if (existingGroup.offerIds.length >= MAX_OFFERS_PER_GROUP) {
-    return { status: "full" as const, family };
+    return { status: "full" as const, family, groups };
   }
 
   const nextGroups = groups.map((group) =>
@@ -153,17 +213,19 @@ export function addOfferToCompareGroups(offer: Offer) {
       ? { ...group, offerIds: [...group.offerIds, offerId], updatedAt: new Date().toISOString() }
       : group,
   );
-  saveCompareGroups(nextGroups);
 
-  return { status: "added" as const, family };
+  saveCompareGroups(nextGroups);
+  await registerComparisonIfReady(existingGroup.offerIds.length, existingGroup.offerIds.length + 1);
+  await syncPersistedState(nextGroups);
+  return { status: "added" as const, family, groups: nextGroups };
 }
 
-export function mergeOffersIntoCompareGroups(offers: Offer[]) {
-  if (offers.length === 0) return loadCompareGroups();
+export async function mergeOffersIntoCompareGroups(offers: Offer[]) {
+  if (offers.length === 0) return (await hydrateCompareState()).groups;
 
   offers.forEach((offer) => persistOfferSnapshot(offer));
 
-  const currentGroups = loadCompareGroups();
+  const currentGroups = (await hydrateCompareState()).groups;
   const groupedOffers = offers.reduce<Record<string, { label: string; ids: string[] }>>((accumulator, offer) => {
     const family = getOfferCompareFamily(offer);
     if (!accumulator[family.key]) {
@@ -182,9 +244,11 @@ export function mergeOffersIntoCompareGroups(offers: Offer[]) {
 
   Object.entries(groupedOffers).forEach(([familyKey, info]) => {
     const existingIndex = merged.findIndex((group) => group.key === familyKey);
-    const mergedIds = existingIndex >= 0
-      ? Array.from(new Set([...merged[existingIndex].offerIds, ...info.ids])).slice(0, MAX_OFFERS_PER_GROUP)
-      : info.ids.slice(0, MAX_OFFERS_PER_GROUP);
+    const previousCount = existingIndex >= 0 ? merged[existingIndex].offerIds.length : 0;
+    const mergedIds =
+      existingIndex >= 0
+        ? Array.from(new Set([...merged[existingIndex].offerIds, ...info.ids])).slice(0, MAX_OFFERS_PER_GROUP)
+        : info.ids.slice(0, MAX_OFFERS_PER_GROUP);
 
     const nextGroup = {
       key: familyKey,
@@ -198,15 +262,19 @@ export function mergeOffersIntoCompareGroups(offers: Offer[]) {
     } else {
       merged.push(nextGroup);
     }
+
+    void registerComparisonIfReady(previousCount, mergedIds.length);
   });
 
   const sorted = merged.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   saveCompareGroups(sorted);
+  await syncPersistedState(sorted);
   return sorted;
 }
 
-export function removeOfferFromCompareGroup(groupKey: string, offerId: string) {
-  const nextGroups = loadCompareGroups()
+export async function removeOfferFromCompareGroup(groupKey: string, offerId: string) {
+  const hydrated = await hydrateCompareState();
+  const nextGroups = hydrated.groups
     .map((group) =>
       group.key === groupKey
         ? { ...group, offerIds: group.offerIds.filter((id) => id !== offerId), updatedAt: new Date().toISOString() }
@@ -215,11 +283,14 @@ export function removeOfferFromCompareGroup(groupKey: string, offerId: string) {
     .filter((group) => group.offerIds.length > 0);
 
   saveCompareGroups(nextGroups);
+  await syncPersistedState(nextGroups);
   return nextGroups;
 }
 
-export function clearCompareGroup(groupKey: string) {
-  const nextGroups = loadCompareGroups().filter((group) => group.key !== groupKey);
+export async function clearCompareGroup(groupKey: string) {
+  const hydrated = await hydrateCompareState();
+  const nextGroups = hydrated.groups.filter((group) => group.key !== groupKey);
   saveCompareGroups(nextGroups);
+  await syncPersistedState(nextGroups);
   return nextGroups;
 }

@@ -13,7 +13,7 @@ const BRAND_POOLS: Record<string, string[]> = {
 const MERCHANTS = ["Darty", "Boulanger", "Fnac", "Amazon", "Cdiscount", "Electro Depot", "But", "Conforama"];
 const AVAILABILITIES = ["Disponible", "Sous 48h", "Sous 5 jours"];
 const WARRANTIES = ["2 ans", "3 ans", "5 ans"];
-const DELIVERIES = ["Gratuite", "9,99 EUR", "19,99 EUR"];
+const DELIVERIES = ["Gratuite", "9,99 €", "19,99 €"];
 
 const PRICE_BASES: Record<string, number> = {
   "lave-linge": 549,
@@ -85,12 +85,12 @@ function getBasePrice(subcategory: string) {
 
 function makeSpecs(subcategoryName: string, index: number, price: number) {
   return {
-    "Reference serie": `S${index.toString().padStart(2, "0")}`,
-    "Classe energetique": ["A", "B", "C"][index % 3],
-    Connectivite: index % 2 === 0 ? "Oui" : "Non",
-    "Capacite / format": `${Math.max(4, (index % 8) + 4)}`,
+    "Référence série": `S${index.toString().padStart(2, "0")}`,
+    "Classe énergétique": ["A", "B", "C"][index % 3],
+    Connectivité: index % 2 === 0 ? "Oui" : "Non",
+    "Capacité / format": `${Math.max(4, (index % 8) + 4)}`,
     "Niveau sonore": `${38 + (index % 18)} dB`,
-    "Prix repere": `${price} EUR`,
+    "Prix repère": `${price} €`,
     Famille: subcategoryName,
   };
 }
@@ -102,7 +102,7 @@ function buildImageUrl(brand: string, product: string) {
 function buildOffer(categoryId: string, subcategoryId: string, subcategoryName: string, index: number): Offer {
   const productIndex = Math.floor(index / 2);
   const merchantIndex = index % MERCHANTS.length;
-  const brands = BRAND_POOLS[categoryId] || ["Maref"];
+  const brands = BRAND_POOLS[categoryId] || ["MAREF"];
   const brand = brands[productIndex % brands.length];
   const merchant = MERCHANTS[merchantIndex];
   const basePrice = getBasePrice(subcategoryId) + productIndex * 27;
@@ -139,10 +139,10 @@ function buildOffer(categoryId: string, subcategoryId: string, subcategoryName: 
     delivery,
     warranty,
     score,
-    status: status?.label || "Catalogue de demonstration",
+    status: status?.label || "Catalogue de démonstration",
     statusColor: status?.color || "#1f4b8f",
-    confidence: "Demo",
-    freshness: "Apercu catalogue",
+    confidence: "Démo",
+    freshness: "Aperçu catalogue",
     imageUrl: buildImageUrl(brand, product),
     sourceUrl: null,
     lastUpdated: currentDate,
@@ -212,7 +212,7 @@ export function getSupplementalDemoOffers(
     subcategory?: string;
     search?: string;
   },
-  minimumPerSubcategory = 10,
+  minimumPerSubcategory = 20,
 ) {
   const allDemoOffers = getFilteredDemoOffers(filters);
   const existingIds = new Set(existingOffers.map((offer) => offer.id));

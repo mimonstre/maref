@@ -1,45 +1,63 @@
-import { getOfferDataState, type NotificationItem, type Offer } from "@/lib/core";
+import type { NotificationItem } from "@/lib/core";
 import { getDemoOfferById, getFilteredDemoOffers, getSupplementalDemoOffers } from "@/lib/demo/offers";
+import { mapOfferRow, type OfferRow } from "./offerMapper";
 import { supabase } from "./supabase";
-
-type OfferRow = {
-  id: string;
-  product: string;
-  brand: string;
-  model: string;
-  category: string;
-  subcategory: string;
-  merchant: string;
-  price: number;
-  barred_price: number | null;
-  availability: string;
-  delivery: string;
-  warranty: string;
-  score: number;
-  status: string;
-  status_color: string;
-  confidence: string;
-  freshness: string;
-  image_url?: string | null;
-  source_url?: string | null;
-  last_updated?: string | null;
-  reliability_score?: number | null;
-  price_history?: Array<{ date: string; price: number; source_url?: string | null }> | null;
-  pefas_p: number;
-  pefas_e: number;
-  pefas_f: number;
-  pefas_a: number;
-  pefas_s: number;
-  mimo_short: string;
-  reasons: string[];
-  vigilances: string[];
-  specs?: Record<string, string>;
-};
 
 type FavoriteRow = { offer_id: string };
 type ViewHistoryRow = { id: string; offer_id: string; viewed_at: string };
-type OfferHistoryRow = Pick<OfferRow, "id" | "product" | "brand" | "price" | "score" | "category" | "merchant">;
+type OfferHistoryRow = {
+  id: string;
+  product: string;
+  brand: string;
+  price: number;
+  score: number | null;
+  category: string;
+  subcategory: string;
+  merchant: string;
+};
 type GenericRow = Record<string, unknown>;
+type LocalHistoryRow = ViewHistoryRow;
+
+const LOCAL_FAVORITES_KEY = "maref.local.favorites";
+const LOCAL_HISTORY_KEY = "maref.local.history";
+
+function canUseStorage() {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function loadLocalFavoriteIds() {
+  if (!canUseStorage()) return [] as string[];
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_FAVORITES_KEY);
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalFavoriteIds(ids: string[]) {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(Array.from(new Set(ids.map(String)))));
+}
+
+function loadLocalHistoryRows() {
+  if (!canUseStorage()) return [] as LocalHistoryRow[];
+
+  try {
+    const raw = window.localStorage.getItem(LOCAL_HISTORY_KEY);
+    const parsed = raw ? (JSON.parse(raw) as LocalHistoryRow[]) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalHistoryRows(rows: LocalHistoryRow[]) {
+  if (!canUseStorage()) return;
+  window.localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(rows.slice(0, 60)));
+}
 
 async function getCurrentUserId() {
   const {
@@ -49,54 +67,16 @@ async function getCurrentUserId() {
   return user?.id ?? null;
 }
 
-function normalizeAvailability(value: string | null | undefined) {
-  if (!value) return "Disponibilite a confirmer";
-  if (value.toLowerCase() === "en stock") return "Disponible";
-  return value;
+function isDemoCatalogEnabled() {
+  return process.env.NEXT_PUBLIC_MAREF_DEMO_CATALOG === "true";
 }
 
-function mapOffer(row: OfferRow): Offer {
-  const offer: Offer = {
-    id: row.id,
-    product: row.product,
-    brand: row.brand,
-    model: row.model,
-    category: row.category,
-    subcategory: row.subcategory,
-    merchant: row.merchant,
-    price: row.price,
-    barredPrice: row.barred_price,
-    availability: normalizeAvailability(row.availability),
-    delivery: row.delivery,
-    warranty: row.warranty,
-    score: typeof row.score === "number" ? row.score : null,
-    status: row.status || null,
-    statusColor: row.status_color || null,
-    confidence: row.confidence || null,
-    freshness: row.freshness || null,
-    imageUrl: row.image_url || null,
-    sourceUrl: row.source_url || null,
-    lastUpdated: row.last_updated || null,
-    reliabilityScore: typeof row.reliability_score === "number" ? row.reliability_score : null,
-    priceHistory: Array.isArray(row.price_history) ? row.price_history : [],
-    dataState: "unknown",
-    pefas: {
-      P: typeof row.pefas_p === "number" ? row.pefas_p : null,
-      E: typeof row.pefas_e === "number" ? row.pefas_e : null,
-      F: typeof row.pefas_f === "number" ? row.pefas_f : null,
-      A: typeof row.pefas_a === "number" ? row.pefas_a : null,
-      S: typeof row.pefas_s === "number" ? row.pefas_s : null,
-    },
-    mimoShort: row.mimo_short || null,
-    reasons: row.reasons || [],
-    vigilances: row.vigilances || [],
-    specs: row.specs || {},
-  };
-
-  return {
-    ...offer,
-    dataState: getOfferDataState(offer),
-  };
+function getDemoCatalog(filters?: {
+  category?: string;
+  subcategory?: string;
+  search?: string;
+}) {
+  return isDemoCatalogEnabled() ? getFilteredDemoOffers(filters) : [];
 }
 
 export async function getOffers(filters?: {
@@ -128,27 +108,27 @@ export async function getOffers(filters?: {
   const { data, error } = await query;
   if (error) {
     console.error("Erreur chargement offres:", error);
-    return getFilteredDemoOffers(filters);
+    return getDemoCatalog(filters);
   }
 
   if (!data || data.length === 0) {
-    return getFilteredDemoOffers(filters);
+    return getDemoCatalog(filters);
   }
 
-  const mappedOffers = data.map((item) => mapOffer(item as OfferRow));
+  const mappedOffers = data.map((item) => mapOfferRow(item as OfferRow));
 
   if (filters?.search) {
-    return mappedOffers.length > 0 ? mappedOffers : getFilteredDemoOffers(filters);
+    return mappedOffers.length > 0 ? mappedOffers : getDemoCatalog(filters);
   }
 
-  const supplementalOffers = getSupplementalDemoOffers(mappedOffers, filters, 10);
+  const supplementalOffers = isDemoCatalogEnabled() ? getSupplementalDemoOffers(mappedOffers, filters, 20) : [];
   return [...mappedOffers, ...supplementalOffers];
 }
 
 export async function getOfferById(id: string) {
   const { data, error } = await supabase.from("offers").select("*").eq("id", id).single();
-  if (error || !data) return getDemoOfferById(id);
-  return mapOffer(data as OfferRow);
+  if (error || !data) return isDemoCatalogEnabled() ? getDemoOfferById(id) : null;
+  return mapOfferRow(data as OfferRow);
 }
 
 export async function getProjects() {
@@ -176,7 +156,18 @@ export async function addFavorite(offerId: string) {
   if (existing && existing.length > 0) return true;
 
   const { error } = await supabase.from("favorites").insert({ user_id: userId, offer_id: offerId });
-  return !error;
+
+  if (error) {
+    const localFavorites = loadLocalFavoriteIds();
+    if (!localFavorites.includes(String(offerId))) {
+      saveLocalFavoriteIds([...localFavorites, String(offerId)]);
+    }
+    return true;
+  }
+
+  const localFavorites = loadLocalFavoriteIds().filter((id) => id !== String(offerId));
+  saveLocalFavoriteIds(localFavorites);
+  return true;
 }
 
 export async function removeFavorite(offerId: string) {
@@ -184,7 +175,9 @@ export async function removeFavorite(offerId: string) {
   if (!userId) return false;
 
   const { error } = await supabase.from("favorites").delete().eq("user_id", userId).eq("offer_id", offerId);
-  return !error;
+  const localFavorites = loadLocalFavoriteIds().filter((id) => id !== String(offerId));
+  saveLocalFavoriteIds(localFavorites);
+  return !error || true;
 }
 
 export async function getFavorites() {
@@ -196,13 +189,24 @@ export async function getFavorites() {
     .select("offer_id")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
-  if (error) return [];
-  return data.map((item) => (item as FavoriteRow).offer_id);
+  const localFavorites = loadLocalFavoriteIds();
+  if (error || !data) return localFavorites;
+  return Array.from(new Set([...data.map((item) => (item as FavoriteRow).offer_id), ...localFavorites]));
 }
 
 export async function recordView(offerId: string) {
   const userId = await getCurrentUserId();
   if (!userId) return;
+
+  const localRows = loadLocalHistoryRows();
+  saveLocalHistoryRows([
+    {
+      id: `local-${offerId}-${Date.now()}`,
+      offer_id: String(offerId),
+      viewed_at: new Date().toISOString(),
+    },
+    ...localRows,
+  ]);
 
   try {
     await supabase.from("view_history").insert({ user_id: userId, offer_id: offerId });
@@ -219,18 +223,30 @@ export async function getViewHistory() {
     .eq("user_id", userId)
     .order("viewed_at", { ascending: false })
     .limit(30);
-  if (!data || data.length === 0) return [];
+  const dbRows = (data || []) as ViewHistoryRow[];
+  const localRows = loadLocalHistoryRows();
+  const historyRows = [...dbRows, ...localRows]
+    .sort((a, b) => new Date(b.viewed_at).getTime() - new Date(a.viewed_at).getTime())
+    .slice(0, 30);
 
-  const historyRows = data as ViewHistoryRow[];
-  const offerIds = [...new Set(historyRows.map((item) => item.offer_id))];
-  const { data: offersData } = await supabase.from("offers").select("id, product, brand, price, score, category, merchant").in("id", offerIds);
-  const offersMap: Record<string, OfferHistoryRow> = {};
+  if (historyRows.length === 0) return [];
 
-  if (offersData) {
-    (offersData as OfferHistoryRow[]).forEach((offer) => {
-      offersMap[offer.id] = offer;
-    });
-  }
+  const catalog = await getOffers({});
+  const offersMap = Object.fromEntries(
+    catalog.map((offer) => [
+      offer.id,
+      {
+        id: offer.id,
+        product: offer.product,
+        brand: offer.brand,
+        price: offer.price,
+        score: offer.score,
+        category: offer.category,
+        subcategory: offer.subcategory,
+        merchant: offer.merchant,
+      } satisfies OfferHistoryRow,
+    ]),
+  );
 
   return historyRows
     .filter((item) => offersMap[item.offer_id])
@@ -247,6 +263,7 @@ export async function clearViewHistory() {
   if (!userId) return;
 
   await supabase.from("view_history").delete().eq("user_id", userId);
+  saveLocalHistoryRows([]);
 }
 
 export async function getUnreadNotificationCount() {
@@ -317,13 +334,15 @@ export async function upsertUserProfile(profile: {
 
 export async function incrementCompareCount() {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return 0;
   const profile = await getUserProfile();
+  const nextCount = (profile?.compare_count || 0) + 1;
   await supabase.from('user_profiles').upsert({
     user_id: user.id,
-    compare_count: (profile?.compare_count || 0) + 1,
+    compare_count: nextCount,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
+  return nextCount;
 }
 
 export async function saveGuideProgress(progress: Record<string, number>) {

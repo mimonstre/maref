@@ -52,6 +52,23 @@ export type Offer = {
   specs: Record<string, string>;
 };
 
+export type Product = {
+  id: string;
+  key: string;
+  title: string;
+  brand: string;
+  model: string;
+  category: string;
+  subcategory: string;
+  imageUrl?: string | null;
+  offers: Offer[];
+  merchants: string[];
+  bestOffer: Offer;
+  lowestPrice: number | null;
+  highestPrice: number | null;
+  offerCount: number;
+};
+
 export type NotificationItem = {
   id: string;
   title: string;
